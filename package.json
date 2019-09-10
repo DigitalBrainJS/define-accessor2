@@ -1,0 +1,58 @@
+{
+  "name": "define-property2",
+  "version": "0.0.1",
+  "description": "Define accessor",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "npm run build && npm run test:run",
+    "test:run": "mocha test/build/",
+    "build": "shx rm -rf dist && gulp build"
+  },
+  "repository": "https://github.com/DigitalBrainJS/define-accessor2.git",
+  "bugs": {
+    "url": "https://github.com/DigitalBrainJS/define-accessor2/issues"
+  },
+  "keywords": [
+    "define",
+    "accessor",
+    "defineProperty",
+    "lazy",
+    "chains",
+    "cached",
+    "object"
+  ],
+  "author": "Dmitriy Mozgovoy",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/core": "^7.2.0",
+    "@babel/plugin-transform-arrow-functions": "^7.2.0",
+    "@babel/plugin-transform-block-scoping": "^7.2.0",
+    "@babel/plugin-transform-destructuring": "^7.2.0",
+    "@babel/plugin-transform-parameters": "^7.2.0",
+    "@babel/plugin-transform-shorthand-properties": "^7.2.0",
+    "@babel/plugin-transform-template-literals": "^7.2.0",
+    "chai": "^4.2.0",
+    "connect": "^3.6.6",
+    "expect": "^23.6.0",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^7.0.1",
+    "gulp-better-rollup": "^3.3.0",
+    "gulp-minify": "^3.1.0",
+    "gulp-plumber": "^1.2.0",
+    "gulp-rename": "^1.4.0",
+    "mocha": "^5.2.0",
+    "mocha-headless-chrome": "^2.0.3",
+    "mocha-phantomjs": "^4.1.0",
+    "rollup-plugin-babel": "^4.0.3",
+    "rollup-plugin-commonjs": "^9.1.4",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "run-sequence": "^2.2.1",
+    "safe-jsonp": "^0.6.1",
+    "serve-static": "^1.13.2",
+    "shx": "^0.3.2",
+    "through2": "^3.0.1"
+  }
+}
