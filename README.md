@@ -54,7 +54,7 @@ Basic writable accessor/property
         __proto__: Object
      */
 ```
-Define a read-only public property 'name' which refers to auto-created writable internal property value
+Define a read-only public property 'name' which refers to auto-created internal property
 ```javascript
     class Spider{
         constructor(){
@@ -203,8 +203,8 @@ Lazy prop
   - `obj:Object` target
   - `props:String|Symbol` a key for accessor's property. 
   - `[options: Object]`
-      - `get: Function` accessor getter, if undefined- the default getter will be set
-      - `set: Function` accessor setter, if undefined and writable option is set- default the setter will be set
+      - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- the default getter will be set
+      - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- default the setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
       - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
       - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
