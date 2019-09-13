@@ -1,15 +1,230 @@
-# define-prop 
+# define-accessor2
 
-
-:star: A safer JSONP implementation for browsers with extra features :star:
+:star: Some extra functionality for the defineProperty method. :star:
 
 # Features
-- :zap: **safer requests to untrusted origins using optional sandbox mechanism\* (iframes & postMessage used inside)**
-- :zap: **can abort the related http requests\*\* (other libs just ignore the response, but related http query keeps in pending state for some time**
-- :heavy_check_mark: no dependencies
+- :zap: lazy computed properties - computes the value once on reading
+- :zap:cached property - uses a getter only after the value 
+has been changed or marked as deprecated using the flush method
+- :zap: chaining methods - adds the chaining methods set**PropName** 
+and set**PropName** to the object associated with the public getter / setter
+- :zap: auto flush cache on changing linked properties
+- virtual property - without private associated property
+- supports setting the initial value
+- informative exceptions
+- no dependencies
 - :heavy_check_mark: CDN friendly
 
+## Installation
 
+Install for node.js or browserify using npm/yarn:
+
+``` bash
+$ npm install define-property2 --save
+```
+
+``` bash
+$ yarn add define-property2
+```
+
+## Usage examples
+Basic writable accessor/property
+```javascript
+    const user= {};
+
+    defineAccessor(user, 'name', {
+        get(propName, privateValue){
+            //compute some public prop value
+            return privateValue.trim().replace(/\w/, (str)=> str.toUpperCase())
+        },
+        writable: true, //writable from public api
+        value: '' //initial value
+    });
+
+    console.log(user.name); // ""
+    user.name= "alex";
+    console.log(user.name); // "Alex"
+    console.dir(user);
+    /*
+    Object
+        Symbol(@@name): "alex"
+        name: (...)
+        get name: ƒ ()
+        set name: ƒ (newValue)
+        __proto__: Object
+     */
+```
+Define read-only public property 'name' which refers to auto-created writable internal property value
+```javascript
+    class Spider{
+        constructor(){
+            this[nameProp.privateKey] = "Donald"; //change internal property value
+        }
+    }
+    
+    const nameProp= defineAccessor(Spider.prototype, 'name'); 
+
+    const spider= new Spider();
+
+    console.log(spider.name); //Donald
+
+    spider.name= "Jack"; //Error: Unable to rewrite read-only property [name] of [object Object]
+```
+With default getter
+````javascript
+class Cat{
+       constructor(){}
+    }
+
+    defineAccessor(Cat.prototype, 'name', {
+        set(newValue, prop, privateValue){
+            console.log('Setter:', newValue, prop, privateValue);
+            return newValue.toUpperCase(); //set newValue to the private property this[Symbol(@@name)]
+        }
+    });
+
+    const cat= new Cat();
+
+    console.log(cat.name); //undefined
+    cat.name= 'Lucky'; //Setter: Lucky name undefined
+    console.log(cat.name); //LUCKY
+    console.dir(cat);
+    /*
+    Cat
+        Symbol(@@name): "LUCKY" //this is a private property used by the public setter&getter
+        name: (...) //public property setter&getter
+        __proto__: Object
+     */
+````
+Accessor referring
+````javascript
+    class User{
+        constructor(){
+
+        }
+    }
+    //some property value modifier
+    const normalize = (str)=> str.trim().replace(/\w/, (str)=> str.toUpperCase());
+
+    const {name, surname}= defineAccessor(User.prototype, {
+        name: {
+            set: normalize,
+            touches: 'fullName', //flush getter cache of fullName property on set
+            value: 'Jon' //append value
+        },
+        surname: {
+            set: normalize,
+            touches: 'fullName',
+            value: 'Connor'
+        },
+        fullName: {
+            get(prop){
+                const value = `${this[name.privateKey]} ${this[surname.privateKey]}`;
+                console.log(`Getter [${prop}] [${value}]`);
+                return value;
+            },
+            set(newValue){
+                ([this.name, this.surname]= (newValue+'').split(/\s+/));
+                return true; //flush property cache
+            },
+            chains: true, //generate&append chains like setFullName(value):this & getFullName()
+            cached: true, //cache getter value
+            virtual: true// dont create private property like obj[Symbol('@@fullName')]
+        }
+    });
+
+    const user= new User();
+    //Getter [fullName] [Jon Connor]
+    console.log(user.fullName); //Jon Connor
+    //just return the result from the cache
+    console.log(user.fullName); //Jon Connor
+    user.name= "dmitriy";
+    //Getter [fullName] [Dmitriy Connor]
+    console.log(user.fullName); //Dmitriy Connor
+
+    console.dir(user);
+/*  User
+        Symbol(@@fullName_CACHED): "Dmitriy Connor"
+        Symbol(@@name): "Dmitriy"
+        fullName: (...)
+        name: (...)
+        surname: (...)
+        __proto__:
+            Symbol(@@PROPS): {fullName: Symbol(@@fullName_CACHED)}
+            Symbol(@@name): "Jon"
+            Symbol(@@surname): "Connor"
+            constructor: class User
+            fullName: (...)
+            getFullName: ƒ ()
+            name: (...)
+            setFullName: ƒ (value)
+            surname: (...)
+            get fullName: ƒ ()
+            set fullName: ƒ (value)
+            get name: ƒ ()
+            set name: ƒ (value)
+            get surname: ƒ ()
+            set surname: ƒ (value)
+            __proto__: Object
+*/
+````
+Lazy prop
+````javascript
+    class SomeClass{}
+
+    defineAccessor(SomeClass.prototype, 'lazyProp', {
+        get(){
+            return Math.random();
+        },
+        lazy: true
+    });
+
+    const c1= new SomeClass();
+
+    console.log(c1.hasOwnProperty('lazyProp')); // false
+    console.log('lazyProp', c1.lazyProp); //0.027590873465141996
+    console.log(c1.hasOwnProperty('lazyProp')); // true
+    console.dir(c1);
+    /*
+    SomeClass
+        lazyProp: 0.027590873465141996
+        __proto__:
+            constructor: class SomeClass
+            lazyProp: (...)
+            get lazyProp: ƒ ()
+            set lazyProp: ƒ (value)
+            __proto__: Object
+     */
+````
+## API
+
+### defineAccessor(obj: Object, prop: String|Symbol, [options: Object]): \<AccessorDescriptor\>
+
+  - `obj:Object` target
+  - `props:String|Symbol` a key for accessor's property. 
+  - `[options: Object]`
+      - `get: Function` accessor getter, if undefined- the default getter will be set
+      - `set: Function` accessor setter, if undefined and writable option is set- default the setter will be set
+      - `writable: Boolean` makes sense when the setter is not defined
+      - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
+      - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
+      - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that pointed accessor's value is depending on this one
+      - `value:Any` value to set
+      - `chains:Boolean` generate&append setter&getter chains like setProp(value):this and getProp() to the target object
+      - `virtual:Boolean` indicates whether an internal property should be created
+      - `configurable: Boolean`
+      - `enumerable: Boolean`
+  
+  **returns** accessor descriptor object
+### defineAccessor(obj: Object, props: Object): \<Object\<AccessorDescriptor\>\>
+  - `obj:Object` target
+  - `props:Object` properties map
+  
+  **returns** accessors descriptor map
+### AccessorDescriptor members  
+  - `prop: String|Symbol` - public property key
+  - `privateSymbol` - private property key
+  - `flush(context: Object)` - flush accessor's cache
 ## Contribution
  Feel free to fork, open issues, enhance or create pull requests. 
 ## License

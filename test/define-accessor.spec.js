@@ -1,4 +1,4 @@
-import {defineAccessor} from "../dist/accessor.esm";
+import defineAccessor from "../dist/define-accessor.esm";
 import chai from "chai";
 
 const {expect} = chai;
@@ -6,12 +6,9 @@ const {expect} = chai;
 const global = new Function("return this")();
 
 describe("defineProperty", function () {
-
-
     const asserts = {
         boolean: true,
         number: 1,
-        object: {},
         undefined
     };
 
@@ -20,7 +17,7 @@ describe("defineProperty", function () {
         Object.entries(asserts).forEach(([type, value]) => {
             expect(() => {
                 defineAccessor(obj, value, {});
-            }).to.throw(TypeError, /prop/, `Passing [${value}] of [${type}] type doesn't throw`);
+            }).to.throw(TypeError, /prop/i, `Passing [${value}] of [${type}] type doesn't throw`);
         });
     });
 
@@ -48,6 +45,16 @@ describe("defineProperty", function () {
         const propName = 'prop';
         defineAccessor(obj, propName, {});
         expect(obj).to.have.property(propName);
+    });
+
+    it("should support the definition of multiple properties", function () {
+        const obj = {};
+        defineAccessor(obj, {
+            x: {},
+            y: {}
+        }, {});
+        expect(obj).to.have.property('x');
+        expect(obj).to.have.property('y');
     });
 
     it("should create new public prop with symbol key", function () {
@@ -190,5 +197,27 @@ describe("defineProperty", function () {
             }).to.throw(Error, /getter/);
         });
     });
+
+    /*describe("decorator", function () {
+        it("should not create a private prop", function () {
+            class Class{
+                constructor(){
+
+                }
+
+                get x(){
+                    return 123;
+                }
+            }
+
+            defineAccessor(obj, 'prop', {
+                virtual: true,
+                get: () => 'value'
+            });
+
+            expect(Object.getOwnPropertySymbols(obj).length).to.equal(0);
+        });
+    });*/
+
 
 });

@@ -14,11 +14,13 @@ const { exec} = require('child_process');
 
 const noop= ()=> through.obj();
 
-const ENTRY_FILE = 'src/accessor.js';
+const ENTRY_FILE = 'src/define-accessor.js';
 const BASE_NAME= path.basename(ENTRY_FILE, '.js');
+const EXPORT_NAME= '';
 const DIST_DIR = __dirname + '/dist';
 const PORT= 3000;
 
+const toCamelCase= (str)=> str.replace(/-([a-z])/g, (w)=>w[1].toUpperCase());
 
 let isDevMode= false;
 
@@ -34,6 +36,7 @@ function createBuildTask(entryFile, buildOptions) {
             taskTargetName = outFile,
             include = 'node_modules/**',
             exclude,
+            babelOptions,
             minify
         } = buildOptions || {};
 
@@ -47,8 +50,8 @@ function createBuildTask(entryFile, buildOptions) {
         })
     ];
 
-    if (toES5) {
-        rollupPlugins.push(babel())
+    if (toES5 || babelOptions) {
+        rollupPlugins.push(babel(babelOptions))
     }
 
     gulp.task(taskName, () => {
@@ -90,7 +93,7 @@ const webserver= ()=>{
     console.log(`Server listening on http://localhost:${PORT}`);
 };
 
-const buildTask = createBuildTask(ENTRY_FILE, {exportName: BASE_NAME, toES5: true, minify: true});
+const buildTask = createBuildTask(ENTRY_FILE, {exportName: EXPORT_NAME || toCamelCase(BASE_NAME), toES5: true, minify: true});
 const buildTaskES = createBuildTask(ENTRY_FILE, {format: 'esm'});
 const buildTests = createBuildTask(`test/${BASE_NAME}.spec.js`, {
     taskTargetName: 'test',

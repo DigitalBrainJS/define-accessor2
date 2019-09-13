@@ -1,13 +1,32 @@
-'use strict';
-
 const {defineProperty} = Reflect || Object;
 const {hasOwnProperty, toString} = Object.prototype;
 const UNDEFINED_VALUE = Symbol();
 
 const isPlainObject= (obj)=> !!obj && toString.call(obj)==='[object Object]';
 
-const define= (obj, prop, descriptor)=> {
-    const propType = typeof prop;
+const symbolProps= Symbol('@@PROPS');
+
+const validatePropKey= (prop)=>{
+    const type= typeof prop;
+    if(type!=='string' && type!=='symbol'){
+        throw TypeError(`Prop should be a string or symbol`);
+    }
+    return type;
+};
+
+const touch= (obj, touches)=> {
+    console.log(`touch [${touches}]`);
+    touches.forEach(prop=> {
+        const props= obj[symbolProps],
+            symbolCache= props && props[prop];
+        if(symbolCache){
+            obj[symbolCache]= UNDEFINED_VALUE;
+        }
+    });
+};
+
+const prepareAccessor= (obj, prop, descriptor)=> {
+    const propType = validatePropKey(prop);
 
     const isSymbolProp = propType === 'symbol';
     if (propType === 'string') {
@@ -28,11 +47,14 @@ const define= (obj, prop, descriptor)=> {
         cached,
         configurable,
         enumerable,
-        value,
         writable = !!set,
         chains,
         virtual,
         lazy
+    } = descriptor;
+
+    let {
+        touches
     } = descriptor;
 
     if (cached && !get) {
@@ -55,47 +77,67 @@ const define= (obj, prop, descriptor)=> {
 
     const propName = isSymbolProp ? prop.toString().slice(7, -1) : prop;
 
-    if (lazy) {
+    if(touches){
+        let type;
+        if((type=typeof touches)!=='Symbol') {
+            if (Array.isArray(touches)) {
+                touches.forEach(validatePropKey);
+            } else if (type === 'string') {
+                touches = touches.split(/\s+/);
+                touches.forEach(validatePropKey);
+            } else {
+                throw TypeError(`touch option should be a string or array`)
+            }
 
+            if (touches.some((destProp) => prop === destProp)) {
+                throw Error(`prop [${propName}] touches itself`);
+            }
+        }
+    }
+
+    if (lazy) {
         if (!get) {
             throw Error(`Getter is required for lazy prop [${propName}]`);
         }
 
-        const redefine = (value) => defineProperty(this, prop, {
-            configurable,
-            enumerable,
-            value
-        });
+        const redefine = function (value) {
+            defineProperty(this, prop, {
+                configurable,
+                enumerable,
+                value
+            });
+        };
 
-        defineProperty(obj, prop, {
-            get: function () {
-                const value = get.call(this);
-                redefine.call(obj, value);
-                return value;
-            },
-            set: redefine,
-            configurable: true,
-            enumerable
-        });
-
-        return;
+        return {
+            descriptor: {
+                get: function () {
+                    const value = get.call(this, prop);
+                    redefine.call(this, value);
+                    return value;
+                },
+                set: redefine,
+                configurable: true,
+                enumerable
+            }
+        };
     }
 
-    const symbolCache = cached ? Symbol(`@@${propName}_CACHED`) : null;
+    const propsMap= cached? hasOwnProperty.call(obj)? obj[symbolProps] : (obj[symbolProps]= Object.create(obj[symbolProps] || null)) : null;
     const symbol = virtual ? null : Symbol(`@@${propName}`);
+    const symbolCache= cached? Symbol(`@@${propName}_CACHED`) : null;
 
     if (!get && virtual) {
         throw Error(`Missing getter for virtual prop [${propName}]`);
     }
 
     const getter = cached ? function () {
-        let value;
+        let value, context= this;
 
-        if (hasOwnProperty.call(this, symbolCache) && (value = this[symbolCache]) !== UNDEFINED_VALUE) {
+        if (hasOwnProperty.call(context, symbolCache) && (value = context[symbolCache]) !== UNDEFINED_VALUE) {
             return value;
         }
 
-        return (this[symbolCache] = virtual ? get.call(this, prop) : get.call(this, prop, this[symbol]));
+        return (context[symbolCache] = (virtual ? get.call(context, prop) : get.call(context, prop, context[symbol])));
     } : (get ? function () {
         return virtual ? get.call(this, prop) : get.call(this, prop, this[symbol])
     } : function () {
@@ -106,17 +148,22 @@ const define= (obj, prop, descriptor)=> {
         throw Error(`Missing setter for writable virtual prop [${propName}]`);
     }
 
+
+
     const setter = set ? function (value) {
         if (virtual) {
             const cachedFlag = set.call(this, value, prop);
 
-            if (cached) {
+            if (cached || touches) {
                 if (cachedFlag !== true && cachedFlag !== false) {
                     throw Error(`Setter of virtual cached prop [${propName}] should return a boolean flag indicating whether the value has been changed inside`);
                 }
 
-                if (cachedFlag) {
-                    this[symbolCache] = UNDEFINED_VALUE;
+                if(cachedFlag) {
+                    if (cached) {
+                        this[symbolCache] = UNDEFINED_VALUE;
+                    }
+                    touches && touch(this, touches);
                 }
             } else {
                 if (cachedFlag !== undefined) {
@@ -127,34 +174,27 @@ const define= (obj, prop, descriptor)=> {
         } else {
             const currentValue = this[symbol];
             const newValue = set.call(this, value, prop, currentValue);
-            console.log(currentValue);
+
             if (newValue !== currentValue) {
+
                 if (cached) {
                     this[symbolCache] = UNDEFINED_VALUE;
                 }
                 this[symbol] = newValue;
+                touches && touch(this, touches);
             }
         }
     } : (writable ? function (newValue) {
+        if(newValue!==this[symbol]){
+            if(cached) {
+                this[symbolCache] = UNDEFINED_VALUE;
+            }
+            touches && touch(this, touches);
+        }
         this[symbol] = newValue;
     } : function () {
         throw Error(`Unable to rewrite read-only property [${prop}] of ${this}`)
     });
-
-    defineProperty(obj, prop, {
-        get: getter,
-        set: setter,
-        configurable,
-        enumerable
-    });
-
-    if ('value' in descriptor) {
-        if (writable) {
-            obj[prop] = value;
-        } else {
-            obj[symbol] = value;
-        }
-    }
 
     if (chains) {
 
@@ -195,30 +235,60 @@ const define= (obj, prop, descriptor)=> {
 
     }
 
-    const flush = function (context) {
-        (context || obj)[symbolCache] = UNDEFINED_VALUE;
-    };
+    if(propsMap){
+        propsMap[prop]= symbolCache;
+    }
 
     return {
-        flush,
-        private: symbol,
-        set(value, context) {
-            (context || obj)[prop] = value;
+        symbol,
+        symbolCache,
+        writable,
+        descriptor: {
+            get: getter,
+            set: setter,
+            configurable,
+            enumerable
         }
     }
 };
 
+function define(obj, prop, options= {}){
+    const {
+        symbol,
+        symbolCache,
+        descriptor,
+        writable
+    }= prepareAccessor(obj, prop, options);
+
+    defineProperty(obj, prop, descriptor);
+
+    const {value}= options;
+
+    if ('value' in options) {
+        if (writable) {
+            descriptor.set.call(obj, value);
+        } else {
+            obj[symbol] = value;
+        }
+    }
+
+    return Object.create(null, {
+        prop: {value: prop},
+        privateKey: {value: symbol},
+        flush: {value: (context)=> (context || obj)[symbolCache] = UNDEFINED_VALUE}
+    });
+}
+
 function defineAccessor(obj, prop, descriptor = {}) {
     if(prop && typeof prop==='object'){
-        const descriptors= {};
         const propsMap= prop;
-        Object.keys(propsMap).forEach(prop => {
+        return Object.keys(propsMap).reduce((descriptors, prop) => {
             descriptors[prop] = define(obj, prop, propsMap[prop]);
-        });
-        return descriptors;
+            return descriptors;
+        }, {});
     }
 
     return define(obj, prop, descriptor);
 }
 
-export {defineAccessor};
+export default defineAccessor;
