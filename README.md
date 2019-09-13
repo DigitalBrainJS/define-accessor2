@@ -1,12 +1,12 @@
 # define-accessor2
 
-:star: Some extra functionality for the defineProperty method. :star:
+:star: Define easily feature-rich assessors/properties for your classes. :star:
 
 # Features
 - :zap: lazy computed properties - computes the value once on reading
-- :zap:cached property - uses a getter only after the value 
+- :zap: cached property - uses a getter only after the value 
 has been changed or marked as deprecated using the flush method
-- :zap: chaining methods - adds the chaining methods set**PropName** 
+- :zap: chaining methods - adds the chaining methods get**PropName** 
 and set**PropName** to the object associated with the public getter / setter
 - :zap: auto flush cache on changing linked properties
 - virtual property - without private associated property
@@ -54,7 +54,7 @@ Basic writable accessor/property
         __proto__: Object
      */
 ```
-Define read-only public property 'name' which refers to auto-created writable internal property value
+Define a read-only public property 'name' which refers to auto-created writable internal property value
 ```javascript
     class Spider{
         constructor(){
@@ -225,6 +225,8 @@ Lazy prop
   - `prop: String|Symbol` - public property key
   - `privateSymbol` - private property key
   - `flush(context: Object)` - flush accessor's cache
+## Functional diagram
+![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
 ## Contribution
  Feel free to fork, open issues, enhance or create pull requests. 
 ## License
