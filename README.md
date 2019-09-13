@@ -1,6 +1,6 @@
 # define-accessor2
 
-:star: Define easily feature-rich assessors/properties for your classes. :star:
+:star: Define feature-rich assessors/properties for your classes :star:
 
 # Features
 - :zap: lazy computed properties - computes the value once on reading
