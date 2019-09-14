@@ -51,7 +51,6 @@
     "gulp-plumber": "^1.2.0",
     "gulp-rename": "^1.4.0",
     "mocha": "^5.2.0",
-    "mocha-headless-chrome": "^2.0.3",
     "rollup-plugin-babel": "^4.0.3",
     "rollup-plugin-commonjs": "^9.1.4",
     "rollup-plugin-node-resolve": "^3.4.0",
