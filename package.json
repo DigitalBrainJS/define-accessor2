@@ -1,6 +1,6 @@
 {
   "name": "define-accessor2",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Define feature-rich assessors/properties for your classes",
   "main": "index.js",
   "module": "./dist/define-accessor.esm.js",
