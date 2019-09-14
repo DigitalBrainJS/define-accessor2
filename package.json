@@ -10,8 +10,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm run build && npm run test:run",
-    "test:run": "mocha test/build/",
+    "test": "npm run tests:build && npm run tests:run",
+    "tests:run": "mocha test/build/",
+    "tests:build": "gulp build:tests",
     "build": "shx rm -rf dist && gulp build",
     "dev": "gulp dev",
     "watch": "gulp watch",
