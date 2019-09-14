@@ -16,7 +16,7 @@
     "build": "shx rm -rf dist && gulp build",
     "dev": "gulp dev",
     "watch": "gulp watch",
-    "prepublish": "npm test",
+    "prepublishOnly": "npm run build && npm test",
     "postversion": "git push && git push --tags",
     "lint": "eslint src"
   },
