@@ -1,4 +1,10 @@
 # define-accessor2
+[![Build Status](https://travis-ci.org/DigitalBrainJS/define-accessor2.svg?branch=master)](https://travis-ci.org/DigitalBrainJS/define-accessor2)
+[![](https://badgen.net/bundlephobia/min/define-accessor2)](https://unpkg.com/define-accessor2/dist/define-accessor2.umd.js)
+[![](https://badgen.net/bundlephobia/minzip/define-accessor2)](https://unpkg.com/define-accessor2/dist/define-accessor2.umd.js)
+[![](https://badgen.net/npm/license/define-accessor2)](https://unpkg.com/define-accessor2/dist/define-accessor2.umd.js)
+[![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
+[![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
 
 :star: Define feature-rich assessors/properties for your classes :star:
 
