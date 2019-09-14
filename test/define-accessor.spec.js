@@ -14,7 +14,8 @@ describe("defineProperty", function () {
 
     it(`should throw if prop is not a string or symbol`, function () {
         const obj = {};
-        Object.entries(asserts).forEach(([type, value]) => {
+        Object.keys(asserts).forEach((type) => {
+            const value= asserts[type];
             expect(() => {
                 defineAccessor(obj, value, {});
             }).to.throw(TypeError, /prop/i, `Passing [${value}] of [${type}] type doesn't throw`);
