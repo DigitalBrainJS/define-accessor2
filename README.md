@@ -26,7 +26,8 @@ $ npm install define-property2 --save
 ``` bash
 $ yarn add define-property2
 ```
-
+## Functional diagram
+![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
 ## Usage examples
 Basic writable accessor/property
 ```javascript
@@ -225,8 +226,6 @@ Lazy prop
   - `prop: String|Symbol` - public property key
   - `privateSymbol` - private property key
   - `flush(context: Object)` - flush accessor's cache
-## Functional diagram
-![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
 ## Contribution
  Feel free to fork, open issues, enhance or create pull requests. 
 ## License
