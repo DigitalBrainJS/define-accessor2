@@ -32,6 +32,24 @@ $ npm install define-property2 --save
 ``` bash
 $ yarn add define-property2
 ```
+
+````javascript 
+import defineAccessor from 'define-accessor2';
+//OR
+const defineAccessor= require('define-accessor2');   
+````
+## CDN
+Use unpkg.com cdn to get the link to the script/module from the package:
+- minified UMD ES5 version (~7kB)
+```html
+<script src="https://unpkg.com/define-accessor2"></script>
+```
+- ESM ES2015 module(~14kB)
+```javascript
+import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.js"
+//or minified version
+import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.min.js"
+```
 ## Functional diagram
 ![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
 ## Usage examples

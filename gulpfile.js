@@ -36,22 +36,21 @@ function createBuildTask(entryFile, buildOptions) {
             taskTargetName = outFile,
             include = 'node_modules/**',
             exclude,
-            babelOptions,
             minify
         } = buildOptions || {};
 
     const taskName = `build:${taskTargetName}`;
 
     const rollupPlugins = [
-        resolve({jsnext: true}),
+        resolve({mainFields: ['module', 'main']}),
         commonjs({
             include: include !== false ? include : undefined,
             exclude
         })
     ];
 
-    if (toES5 || babelOptions) {
-        rollupPlugins.push(babel(babelOptions))
+    if (toES5) {
+        rollupPlugins.push(babel())
     }
 
     gulp.task(taskName, () => {
@@ -59,11 +58,10 @@ function createBuildTask(entryFile, buildOptions) {
             .pipe(isDevMode ? plumber() : noop())
             .pipe(rollup({
                 plugins: rollupPlugins,
-
-                preferConst: true
             }, {
                 name: exportName,
-                format
+                format,
+                preferConst: true
             }))
             .pipe(outFile !== base ? rename(outFile) : noop())
 
