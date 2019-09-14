@@ -204,11 +204,11 @@ Lazy prop
   - `props:String|Symbol` a key for accessor's property. 
   - `[options: Object]`
       - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- the default getter will be set
-      - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- default the setter will be set
+      - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
       - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
       - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
-      - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that pointed accessor's value is depending on this one
+      - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that the value of the specified accessors depends on this.
       - `value:Any` value to set
       - `chains:Boolean` generate&append setter&getter chains like setProp(value):this and getProp() to the target object
       - `virtual:Boolean` indicates whether an internal property should be created

@@ -1,11 +1,8 @@
 const {defineProperty} = Reflect || Object;
 const {hasOwnProperty, toString} = Object.prototype;
 const UNDEFINED_VALUE = Symbol();
-
-const isPlainObject= (obj)=> !!obj && toString.call(obj)==='[object Object]';
-
 const symbolProps= Symbol('@@PROPS');
-
+const isPlainObject= (obj)=> !!obj && toString.call(obj)==='[object Object]';
 const validatePropKey= (prop)=>{
     const type= typeof prop;
     if(type!=='string' && type!=='symbol'){
@@ -15,7 +12,6 @@ const validatePropKey= (prop)=>{
 };
 
 const touch= (obj, touches)=> {
-    console.log(`touch [${touches}]`);
     touches.forEach(prop=> {
         const props= obj[symbolProps],
             symbolCache= props && props[prop];
@@ -31,10 +27,10 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     const isSymbolProp = propType === 'symbol';
     if (propType === 'string') {
         if (!(prop = prop.trim())) {
-            throw TypeError('Prop can not be an empty string');
+            throw TypeError('prop should be a non-empty string');
         }
     } else if (!isSymbolProp) {
-        throw TypeError('Expected prop to be a string|symbol');
+        throw TypeError('expected prop to be a string|symbol');
     }
 
     if (!isPlainObject(descriptor)) {
@@ -58,7 +54,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     } = descriptor;
 
     if (cached && !get) {
-        throw Error(`Getter is required for cached mode`);
+        throw Error(`getter is required for cached mode`);
     }
 
     if (get && typeof get !== 'function') {
@@ -97,7 +93,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
 
     if (lazy) {
         if (!get) {
-            throw Error(`Getter is required for lazy prop [${propName}]`);
+            throw Error(`getter is required for lazy prop [${propName}]`);
         }
 
         const redefine = function (value) {
@@ -127,7 +123,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     const symbolCache= cached? Symbol(`@@${propName}_CACHED`) : null;
 
     if (!get && virtual) {
-        throw Error(`Missing getter for virtual prop [${propName}]`);
+        throw Error(`missing getter for virtual prop [${propName}]`);
     }
 
     const getter = cached ? function () {
@@ -145,7 +141,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     });
 
     if (writable && virtual && !set) {
-        throw Error(`Missing setter for writable virtual prop [${propName}]`);
+        throw Error(`missing setter for writable virtual prop [${propName}]`);
     }
 
 
@@ -156,7 +152,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
 
             if (cached || touches) {
                 if (cachedFlag !== true && cachedFlag !== false) {
-                    throw Error(`Setter of virtual cached prop [${propName}] should return a boolean flag indicating whether the value has been changed inside`);
+                    throw Error(`setter of the virtual cached prop [${propName}] should return a boolean flag indicating whether the value has been changed inside`);
                 }
 
                 if(cachedFlag) {
@@ -167,7 +163,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
                 }
             } else {
                 if (cachedFlag !== undefined) {
-                    throw Error(`Setter for virtual prop [${propName}] should not return any value`);
+                    throw Error(`setter for virtual prop [${propName}] should not return any value`);
                 }
             }
 
@@ -193,31 +189,24 @@ const prepareAccessor= (obj, prop, descriptor)=> {
         }
         this[symbol] = newValue;
     } : function () {
-        throw Error(`Unable to rewrite read-only property [${prop}] of ${this}`)
+        throw Error(`unable to rewrite read-only property [${prop}] of ${this}`)
     });
 
     if (chains) {
-
         if (!propName) {
-            throw Error(`Can not create named chain for anonymous symbol property`);
+            throw Error(`can not create named chain for anonymous symbol property`);
         }
-
         let chainName = typeof chains === 'string' ? chains.trim() : propName.replace(/[^A-Za-z][^-A-Za-z0-9_]*/, '');
-
         if (!chainName) {
-            throw Error(`Can not generate chain name for [${prop}] prop`);
+            throw Error(`can't generate chain name for [${prop}] prop`);
         }
-
         chainName = chainName[0].toUpperCase() + chainName.slice(1);
-
         defineProperty(obj, 'get' + chainName, {
             configurable,
             enumerable,
             value: getter
         });
-
         const setterName = 'set' + chainName;
-
         defineProperty(obj, setterName, {
             configurable,
             enumerable,
@@ -228,17 +217,13 @@ const prepareAccessor= (obj, prop, descriptor)=> {
                 } else {
                     throw Error(length ? `too much arguments [${length}] were passed to [${setterName}] accessor` : `accessor [${setterName}] requires a value`);
                 }
-
                 return this;
             }
         })
-
     }
-
     if(propsMap){
         propsMap[prop]= symbolCache;
     }
-
     return {
         symbol,
         symbolCache,
@@ -287,7 +272,6 @@ function defineAccessor(obj, prop, descriptor = {}) {
             return descriptors;
         }, {});
     }
-
     return define(obj, prop, descriptor);
 }
 

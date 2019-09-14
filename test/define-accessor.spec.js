@@ -157,7 +157,7 @@ describe("defineProperty", function () {
             });
 
             obj.setProp(value);
-            expect(obj[prop.private]).to.equal(value);
+            expect(obj[prop.privateKey]).to.equal(value);
         });
 
         it("should support value getting", function () {
@@ -171,7 +171,7 @@ describe("defineProperty", function () {
 
             obj.prop = value;
 
-            expect(obj.getProp()).to.equal(obj[prop.private]);
+            expect(obj.getProp()).to.equal(obj[prop.privateKey]);
         });
     });
 
