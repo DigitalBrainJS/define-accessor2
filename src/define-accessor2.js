@@ -264,7 +264,7 @@ function define(obj, prop, options= {}){
     });
 }
 
-function defineAccessor(obj, prop, descriptor = {}) {
+function defineAccessor2(obj, prop, descriptor = {}) {
     if(prop && typeof prop==='object'){
         const propsMap= prop;
         return Object.keys(propsMap).reduce((descriptors, prop) => {
@@ -275,4 +275,4 @@ function defineAccessor(obj, prop, descriptor = {}) {
     return define(obj, prop, descriptor);
 }
 
-export default defineAccessor;
+export default defineAccessor2;

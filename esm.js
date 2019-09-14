@@ -1,1 +1,1 @@
-export {default} from "./dist/define-accessor.esm"
+export {default} from "./dist/define-accessor2.esm"

@@ -14,7 +14,7 @@ const { exec} = require('child_process');
 
 const noop= ()=> through.obj();
 
-const ENTRY_FILE = 'src/define-accessor.js';
+const ENTRY_FILE = 'src/define-accessor2.js';
 const BASE_NAME= path.basename(ENTRY_FILE, '.js');
 const EXPORT_NAME= '';
 const DIST_DIR = __dirname + '/dist';
@@ -94,7 +94,7 @@ const webserver= ()=>{
 };
 
 const buildTask = createBuildTask(ENTRY_FILE, {exportName: EXPORT_NAME || toCamelCase(BASE_NAME), toES5: true, minify: true});
-const buildTaskES = createBuildTask(ENTRY_FILE, {format: 'esm'});
+const buildTaskES = createBuildTask(ENTRY_FILE, {format: 'esm', minify: true});
 const buildTests = createBuildTask(`test/${BASE_NAME}.spec.js`, {
     taskTargetName: 'tests',
     format: 'cjs',
