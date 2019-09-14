@@ -25,13 +25,18 @@
     "url": "https://github.com/DigitalBrainJS/define-accessor2/issues"
   },
   "keywords": [
+    "defineProperty",
     "define",
     "accessor",
-    "defineProperty",
+    "property",
+    "prop",
     "lazy",
+    "getter",
+    "setter",
     "chains",
     "cached",
-    "object"
+    "object",
+    "private"
   ],
   "author": "Dmitriy Mozgovoy",
   "license": "MIT",
