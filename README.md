@@ -34,15 +34,18 @@ $ yarn add define-property2
 ```
 
 ````javascript 
-import defineAccessor from 'define-accessor2';
+import defineAccessor from 'define-accessor2/esm';
 //OR
 const defineAccessor= require('define-accessor2');   
 ````
 ## CDN
 Use unpkg.com cdn to get the link to the script/module from the package:
-- minified UMD ES5 version (~7kB)
+- minified UMD ES5 version (~5kB)
 ```html
 <script src="https://unpkg.com/define-accessor2"></script>
+<script>
+    defineAccessor({}, 'x'); //Note: without "2" at the end
+</script>
 ```
 - ESM ES2015 module(~14kB)
 ```javascript
@@ -97,9 +100,7 @@ Define a read-only public property 'name' which refers to auto-created internal 
 ```
 With default getter
 ````javascript
-class Cat{
-       constructor(){}
-    }
+class Cat{}
 
     defineAccessor(Cat.prototype, 'name', {
         set(newValue, prop, privateValue){
@@ -123,11 +124,7 @@ class Cat{
 ````
 Accessor referring
 ````javascript
-    class User{
-        constructor(){
-
-        }
-    }
+    class User{}
     //some property value modifier
     const normalize = (str)=> str.trim().replace(/\w/, (str)=> str.toUpperCase());
 
@@ -154,7 +151,7 @@ Accessor referring
             },
             chains: true, //generate&append chains like setFullName(value):this & getFullName()
             cached: true, //cache getter value
-            virtual: true// dont create private property like obj[Symbol('@@fullName')]
+            virtual: true// don't create private property like obj[Symbol('@@fullName')]
         }
     });
 
@@ -221,6 +218,30 @@ Lazy prop
             __proto__: Object
      */
 ````
+Chains:
+````javascript
+    class Duck{}
+
+    defineAccessor(Duck.prototype, {
+        name: {
+            chains: true,
+            writable: true,
+            value: ''
+        },
+        weight: {
+            chains: true,
+            writable: true,
+            value: 0
+        }
+    });
+
+    const duck= new Duck();
+
+    console.log(duck.name); //''
+    duck.setName('Donald').setWeight(10);
+    console.log(duck.getName()); //'Donald'
+    console.log(duck.getWeight()); //10
+````
 ## API
 
 ### defineAccessor(obj: Object, prop: String|Symbol, [options: Object]): \<AccessorDescriptor\>
@@ -234,7 +255,7 @@ Lazy prop
       - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
       - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
       - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that the value of the specified accessors depends on this.
-      - `value:Any` value to set
+      - `value:Any` a value to set
       - `chains:Boolean` generate&append setter&getter chains like setProp(value):this and getProp() to the target object
       - `virtual:Boolean` indicates whether an internal property should be created
       - `configurable: Boolean`

@@ -264,7 +264,26 @@ function define(obj, prop, options= {}){
     });
 }
 
-function defineAccessor2(obj, prop, descriptor = {}) {
+/**
+ * Defines an accessor
+ * @param obj {Object} target object
+ * @param prop {String|Symbol} property key
+ * @param [descriptor] {Object}
+ * @param {Function} [descriptor.get] accessor getter
+ * @param {Function} [descriptor.set] accessor setter
+ * @param {Boolean} [descriptor.writable]
+ * @param {Boolean} [descriptor.enumerable]
+ * @param {Boolean} [descriptor.configurable]
+ * @param {Boolean} [descriptor.cached]
+ * @param {Boolean} [descriptor.lazy]
+ * @param {Boolean} [descriptor.virtual]
+ * @param {*} [descriptor.value]
+ * @param {Boolean} [descriptor.chains]
+ * @param {String|Symbol|Array<String|Symbol>} [descriptor.touches]
+ * @returns {Object}
+ */
+
+function defineAccessor(obj, prop, descriptor = {}) {
     if(prop && typeof prop==='object'){
         const propsMap= prop;
         return Object.keys(propsMap).reduce((descriptors, prop) => {
@@ -275,4 +294,4 @@ function defineAccessor2(obj, prop, descriptor = {}) {
     return define(obj, prop, descriptor);
 }
 
-export default defineAccessor2;
+export default defineAccessor;
