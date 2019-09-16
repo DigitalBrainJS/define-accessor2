@@ -55,6 +55,8 @@ import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.
 ```
 ## Functional diagram
 ![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
+## Try it!
+https://jsfiddle.net/DigitalBrain/uw01do2m/2/
 ## Usage examples
 Basic writable accessor/property
 ```javascript
