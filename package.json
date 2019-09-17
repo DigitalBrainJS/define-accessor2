@@ -1,7 +1,7 @@
 {
   "name": "define-accessor2",
   "version": "0.1.3",
-  "description": "Define feature-rich assessors/properties for your classes",
+  "description": "Define feature-rich accessors/properties for your classes",
   "main": "index.js",
   "module": "./dist/define-accessor2.esm.js",
   "unpkg": "./dist/define-accessor2.umd.min.js",

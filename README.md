@@ -6,7 +6,7 @@
 [![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
 [![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
 
-:star: Define feature-rich assessors/properties for your classes :star:
+:star: Define feature-rich accessors/properties for your classes :star:
 
 # Features
 - :zap: lazy computed properties - computes the value once on reading
@@ -56,7 +56,7 @@ import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.
 ## Functional diagram
 ![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
 ## Try it!
-https://jsfiddle.net/DigitalBrain/uw01do2m/2/
+https://jsfiddle.net/DigitalBrain/uw01do2m/
 ## Usage examples
 Basic writable accessor/property
 ```javascript
@@ -67,7 +67,7 @@ Basic writable accessor/property
             //compute some public prop value
             return privateValue.trim().replace(/\w/, (str)=> str.toUpperCase())
         },
-        writable: true, //writable from public api
+        writable: true, //writable from the public api
         value: '' //initial value
     });
 
