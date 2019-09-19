@@ -91,7 +91,7 @@ Define a read-only public property 'name' which refers to auto-created internal 
 ```javascript
     class Spider{
         constructor(){
-            this[nameProp.privateKey] = "Donald"; //change internal property value
+            this[nameProp] = "Donald"; //change internal property value
         }
     }
     
@@ -146,7 +146,7 @@ Accessor referring
         },
         fullName: {
             get(prop){
-                const value = `${this[name.privateKey]} ${this[surname.privateKey]}`;
+                const value = `${this[name]} ${this[surname]}`;
                 console.log(`Getter [${prop}] [${value}]`);
                 return value;
             },
