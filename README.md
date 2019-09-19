@@ -36,7 +36,9 @@ $ yarn add define-property2
 ````javascript 
 import defineAccessor from 'define-accessor2/esm';
 //OR
-const defineAccessor= require('define-accessor2');   
+import {defineAccessor, flush} from 'define-accessor2/esm';
+//OR
+const {defineAccessor, flush}= require('define-accessor2');   
 ````
 ## CDN
 Use unpkg.com cdn to get the link to the script/module from the package:
@@ -44,14 +46,15 @@ Use unpkg.com cdn to get the link to the script/module from the package:
 ```html
 <script src="https://unpkg.com/define-accessor2"></script>
 <script>
+    const {defineAccessor, flush}= accessor;
     defineAccessor({}, 'x'); //Note: without "2" at the end
 </script>
 ```
 - ESM ES2015 module(~14kB)
 ```javascript
-import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.js"
+import {defineProperty} from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.js"
 //or minified version
-import JSONP from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.min.js"
+import {defineProperty} from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.min.js"
 ```
 ## Functional diagram
 ![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)   
@@ -251,7 +254,7 @@ Chains:
   - `obj:Object` target
   - `props:String|Symbol` a key for accessor's property. 
   - `[options: Object]`
-      - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- the default getter will be set
+      - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- a default getter will be set
       - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
       - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
@@ -263,16 +266,16 @@ Chains:
       - `configurable: Boolean`
       - `enumerable: Boolean`
   
-  **returns** accessor descriptor object
+  **returns** a symbol key of the private property
 ### defineAccessor(obj: Object, props: Object): \<Object\<AccessorDescriptor\>\>
-  - `obj:Object` target
+  - `obj:Object` target object
   - `props:Object` properties map
   
-  **returns** accessors descriptor map
-### AccessorDescriptor members  
-  - `prop: String|Symbol` - public property key
-  - `privateSymbol` - private property key
-  - `flush(context: Object)` - flush accessor's cache
+### `flush(context: Object, propKey: String|Symbol):Boolean` - flush accessor's cache 
+  **returns** true if done
+  - `obj:Object` target object
+  - `propKey:String|Symbol` public accessor's key
+
 ## Contribution
  Feel free to fork, open issues, enhance or create pull requests. 
 ## License

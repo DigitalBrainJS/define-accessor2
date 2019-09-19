@@ -1,4 +1,4 @@
-import defineAccessor from "../dist/define-accessor2.esm";
+import {defineAccessor} from "../dist/define-accessor2.esm";
 import chai from "chai";
 
 const {expect} = chai;

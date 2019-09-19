@@ -21,6 +21,25 @@ const touch= (obj, touches)=> {
     });
 };
 
+/**
+ * flush accessor's cache
+ * @param obj {Object} target object
+ * @param prop {String|Symbol} public accessor's key
+ * @returns {boolean} true if flushed successfully
+ */
+
+export const flush = (obj, prop)=>{
+   const propsMap= obj && obj[symbolProps];
+   let cacheKey;
+
+   if(propsMap && (cacheKey= propsMap[prop])){
+       obj[cacheKey]= UNDEFINED_VALUE;
+       return true;
+   }
+
+   return false;
+};
+
 const prepareAccessor= (obj, prop, descriptor)=> {
     const propType = validatePropKey(prop);
 
@@ -240,7 +259,6 @@ const prepareAccessor= (obj, prop, descriptor)=> {
 function define(obj, prop, options= {}){
     const {
         symbol,
-        symbolCache,
         descriptor,
         writable
     }= prepareAccessor(obj, prop, options);
@@ -257,11 +275,7 @@ function define(obj, prop, options= {}){
         }
     }
 
-    return Object.create(null, {
-        prop: {value: prop},
-        privateKey: {value: symbol},
-        flush: {value: (context)=> (context || obj)[symbolCache] = UNDEFINED_VALUE}
-    });
+    return symbol;
 }
 
 /**
@@ -280,10 +294,10 @@ function define(obj, prop, options= {}){
  * @param {*} [descriptor.value]
  * @param {Boolean} [descriptor.chains]
  * @param {String|Symbol|Array<String|Symbol>} [descriptor.touches]
- * @returns {Object}
+ * @returns {Symbol}
  */
 
-function defineAccessor(obj, prop, descriptor = {}) {
+export function defineAccessor(obj, prop, descriptor = {}) {
     if(prop && typeof prop==='object'){
         const propsMap= prop;
         return Object.keys(propsMap).reduce((descriptors, prop) => {
