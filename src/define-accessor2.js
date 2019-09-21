@@ -1,46 +1,28 @@
 const {defineProperty} = Reflect || Object;
 const {hasOwnProperty, toString} = Object.prototype;
 const UNDEFINED_VALUE = Symbol();
-const symbolProps= Symbol('@@PROPS');
-const isPlainObject= (obj)=> !!obj && toString.call(obj)==='[object Object]';
-const validatePropKey= (prop)=>{
-    const type= typeof prop;
-    if(type!=='string' && type!=='symbol'){
+const symbolProps = Symbol('@@PROPS');
+const isPlainObject = (obj) => !!obj && toString.call(obj) === '[object Object]';
+const validatePropKey = (prop) => {
+    const type = typeof prop;
+    if (type !== 'string' && type !== 'symbol') {
         throw TypeError(`Prop should be a string or symbol`);
     }
     return type;
 };
 
-const touch= (obj, touches)=> {
-    touches.forEach(prop=> {
-        const props= obj[symbolProps],
-            symbolCache= props && props[prop];
-        if(symbolCache){
-            obj[symbolCache]= UNDEFINED_VALUE;
+const touch = (obj, touches) => {
+    touches.forEach(prop => {
+        const props = obj[symbolProps],
+            symbolCache = props && props[prop];
+        if (symbolCache) {
+            obj[symbolCache] = UNDEFINED_VALUE;
         }
     });
 };
 
-/**
- * flush accessor's cache
- * @param obj {Object} target object
- * @param prop {String|Symbol} public accessor's key
- * @returns {boolean} true if flushed successfully
- */
 
-export const flush = (obj, prop)=>{
-   const propsMap= obj && obj[symbolProps];
-   let cacheKey;
-
-   if(propsMap && (cacheKey= propsMap[prop])){
-       obj[cacheKey]= UNDEFINED_VALUE;
-       return true;
-   }
-
-   return false;
-};
-
-const prepareAccessor= (obj, prop, descriptor)=> {
+const prepareAccessor = (obj, prop, descriptor) => {
     const propType = validatePropKey(prop);
 
     const isSymbolProp = propType === 'symbol';
@@ -92,9 +74,9 @@ const prepareAccessor= (obj, prop, descriptor)=> {
 
     const propName = isSymbolProp ? prop.toString().slice(7, -1) : prop;
 
-    if(touches){
+    if (touches) {
         let type;
-        if((type=typeof touches)!=='Symbol') {
+        if ((type = typeof touches) !== 'Symbol') {
             if (Array.isArray(touches)) {
                 touches.forEach(validatePropKey);
             } else if (type === 'string') {
@@ -137,16 +119,16 @@ const prepareAccessor= (obj, prop, descriptor)=> {
         };
     }
 
-    const propsMap= cached? hasOwnProperty.call(obj)? obj[symbolProps] : (obj[symbolProps]= Object.create(obj[symbolProps] || null)) : null;
+    const propsMap = cached ? hasOwnProperty.call(obj) ? obj[symbolProps] : (obj[symbolProps] = Object.create(obj[symbolProps] || null)) : null;
     const symbol = virtual ? null : Symbol(`@@${propName}`);
-    const symbolCache= cached? Symbol(`@@${propName}_CACHED`) : null;
+    const symbolCache = cached ? Symbol(`@@${propName}_CACHED`) : null;
 
     if (!get && virtual) {
         throw Error(`missing getter for virtual prop [${propName}]`);
     }
 
     const getter = cached ? function () {
-        let value, context= this;
+        let value, context = this;
 
         if (hasOwnProperty.call(context, symbolCache) && (value = context[symbolCache]) !== UNDEFINED_VALUE) {
             return value;
@@ -164,7 +146,6 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     }
 
 
-
     const setter = set ? function (value) {
         if (virtual) {
             const cachedFlag = set.call(this, value, prop);
@@ -174,7 +155,7 @@ const prepareAccessor= (obj, prop, descriptor)=> {
                     throw Error(`setter of the virtual cached prop [${propName}] should return a boolean flag indicating whether the value has been changed inside`);
                 }
 
-                if(cachedFlag) {
+                if (cachedFlag) {
                     if (cached) {
                         this[symbolCache] = UNDEFINED_VALUE;
                     }
@@ -200,8 +181,8 @@ const prepareAccessor= (obj, prop, descriptor)=> {
             }
         }
     } : (writable ? function (newValue) {
-        if(newValue!==this[symbol]){
-            if(cached) {
+        if (newValue !== this[symbol]) {
+            if (cached) {
                 this[symbolCache] = UNDEFINED_VALUE;
             }
             touches && touch(this, touches);
@@ -240,8 +221,8 @@ const prepareAccessor= (obj, prop, descriptor)=> {
             }
         })
     }
-    if(propsMap){
-        propsMap[prop]= symbolCache;
+    if (propsMap) {
+        propsMap[prop] = symbolCache;
     }
     return {
         symbol,
@@ -256,16 +237,16 @@ const prepareAccessor= (obj, prop, descriptor)=> {
     }
 };
 
-function define(obj, prop, options= {}){
+function define(obj, prop, options = {}) {
     const {
         symbol,
         descriptor,
         writable
-    }= prepareAccessor(obj, prop, options);
+    } = prepareAccessor(obj, prop, options);
 
     defineProperty(obj, prop, descriptor);
 
-    const {value}= options;
+    const {value} = options;
 
     if ('value' in options) {
         if (writable) {
@@ -279,33 +260,92 @@ function define(obj, prop, options= {}){
 }
 
 /**
+ * @typedef {String|Symbol} PropertyKey
+ */
+
+/**
+ * Accessor's descriptor.
+ * @typedef {Object} AccessorDescriptor
+ * @property {Function} [get] accessor getter
+ * @property {Function} [set] accessor setter
+ * @property {Boolean} [writable]
+ * @property {Boolean} [enumerable]
+ * @property {Boolean} [configurable]
+ * @property {Boolean} [cached]
+ * @property {Boolean} [lazy]
+ * @property {Boolean} [virtual]
+ * @property {Boolean} [chains]
+ * @property {PropertyKey|PropertyKey[]} [touches]
+ * @property {*} [value]
+ */
+
+/**
  * Defines an accessor
- * @param obj {Object} target object
- * @param prop {String|Symbol} property key
- * @param [descriptor] {Object}
- * @param {Function} [descriptor.get] accessor getter
- * @param {Function} [descriptor.set] accessor setter
- * @param {Boolean} [descriptor.writable]
- * @param {Boolean} [descriptor.enumerable]
- * @param {Boolean} [descriptor.configurable]
- * @param {Boolean} [descriptor.cached]
- * @param {Boolean} [descriptor.lazy]
- * @param {Boolean} [descriptor.virtual]
- * @param {*} [descriptor.value]
- * @param {Boolean} [descriptor.chains]
- * @param {String|Symbol|Array<String|Symbol>} [descriptor.touches]
+ *
+ * @param {Object} obj target object
+ * @param {PropertyKey} prop  property key
+ * @param {AccessorDescriptor} [descriptor]
  * @returns {Symbol}
+ * //**
+ *
+ * @param {Object} obj target object
+ * @param {Array.<PropertyKey>} prop  property key
+ * @param {AccessorDescriptor} [descriptor]
+ * @returns {Array.<Symbol>}
+ * //**
+ *
+ * @param {Object} obj target object
+ * @param {Object.<PropertyKey>} prop  property key
+ * @param {Object} [options]
+ * @param {String} [options.prefix]
+ * @returns {Object.<Symbol>}
  */
 
 export function defineAccessor(obj, prop, descriptor = {}) {
-    if(prop && typeof prop==='object'){
-        const propsMap= prop;
-        return Object.keys(propsMap).reduce((descriptors, prop) => {
-            descriptors[prop] = define(obj, prop, propsMap[prop]);
-            return descriptors;
-        }, {});
+    if (typeof prop === 'object') {
+        if (Array.isArray(prop)) {
+            return prop.map(prop => define(obj, prop, descriptor));
+        } else {
+            if (descriptor !== undefined && !isPlainObject(descriptor)) {
+                throw TypeError(`Options should be a plain object`);
+            }
+
+            const {
+                prefix
+            } = descriptor || {};
+
+            if (prefix && typeof prefix !== 'string') {
+                throw TypeError('prefix options should be a string');
+            }
+
+            const props = prop;
+            return Object.keys(props).reduce((descriptors, prop) => {
+                descriptors[(prefix && typeof prop === 'string' ? prefix : '') + prop] = define(obj, prop, props[prop]);
+                return descriptors;
+            }, {});
+        }
     }
+
     return define(obj, prop, descriptor);
+}
+
+/**
+ * flush accessor's cache
+ * @param obj {Object} target object
+ * @param prop {PropertyKey} public accessor's key
+ * @returns {boolean} true if flushed successfully
+ */
+
+export function flush(obj, prop) {
+    const propsMap = obj && obj[symbolProps];
+    let cacheKey;
+
+    if (propsMap && (cacheKey = propsMap[prop])) {
+        obj[cacheKey] = UNDEFINED_VALUE;
+        return true;
+    }
+
+    return false;
 }
 
 export default defineAccessor;

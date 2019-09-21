@@ -102,7 +102,7 @@ const buildTests = createBuildTask(`test/${BASE_NAME}.spec.js`, {
 });
 
 const runTests= (done)=>{
-    exec('npm run test:run', (err, stdout) => {
+    exec('npm run tests:run', (err, stdout) => {
 
         console.log(`test:\n ${stdout}`);
 

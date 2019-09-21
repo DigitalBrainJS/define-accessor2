@@ -199,26 +199,47 @@ describe("defineProperty", function () {
         });
     });
 
-    /*describe("decorator", function () {
-        it("should not create a private prop", function () {
-            class Class{
-                constructor(){
+    describe("definition of several accessors at once", function () {
+        it("should return an array of private keys (symbols) if an array of props were given as second argument", function(){
+            const obj= {};
+            const keys= ["one", "two"];
 
-                }
+            const result= defineAccessor(obj, keys);
 
-                get x(){
-                    return 123;
-                }
-            }
+            expect(result).to.be.an('array');
+            expect(result.every(symbol => typeof symbol==="symbol")).to.be.true;
+        });
 
-            defineAccessor(obj, 'prop', {
-                virtual: true,
-                get: () => 'value'
+        it("should return an object of private keys (symbols) if an object of descriptors were given as second argument", function(){
+            const obj= {};
+
+            const result= defineAccessor(obj, {
+                one: {},
+                two: {}
             });
 
-            expect(Object.getOwnPropertySymbols(obj).length).to.equal(0);
+            expect(result).to.be.an('object');
+            expect(Object.keys(result).every(key => typeof key==="string")).to.be.true;
+            expect(Object.keys(result).every(key => typeof result[key]==="symbol")).to.be.true;
         });
-    });*/
 
+        it("should support prefix for keys in the result object", function(){
+            const obj= {};
 
+            const props= {
+                one: {},
+                two: {}
+            };
+
+            const prefix= "_";
+
+            const result= defineAccessor(obj, props, {
+                prefix
+            });
+
+            expect(result).to.be.an('object');
+            const resultKeys= Object.keys(result);
+            expect(Object.keys(props).every(originalKey => resultKeys.includes(prefix + originalKey))).to.be.true;
+        })
+    });
 });

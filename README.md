@@ -12,9 +12,8 @@
 - :zap: lazy computed properties - computes the value once on reading
 - :zap: cached property - uses a getter only after the value 
 has been changed or marked as deprecated using the flush method
-- :zap: chaining methods - adds the chaining methods get**PropName** 
-and set**PropName** to the object associated with the public getter / setter
-- :zap: auto flush cache on changing linked properties
+- :zap: chaining methods - it can add the chaining methods like get**PropName** and set**PropName** to the object.
+- :zap: automatically flushes the getter cache after changing related properties
 - virtual property - without private associated property
 - supports setting the initial value
 - informative exceptions
@@ -42,15 +41,15 @@ const {defineAccessor, flush}= require('define-accessor2');
 ````
 ## CDN
 Use unpkg.com cdn to get the link to the script/module from the package:
-- minified UMD ES5 version (~5kB)
+- minified UMD ES5 version (~4kB)
 ```html
 <script src="https://unpkg.com/define-accessor2"></script>
 <script>
-    const {defineAccessor, flush}= accessor;
+    const {defineAccessor, flush}= accessor; //accessor is global variable exported by the script
     defineAccessor({}, 'x'); //Note: without "2" at the end
 </script>
 ```
-- ESM ES2015 module(~14kB)
+- ESM ES2015 module(~11kB)
 ```javascript
 import {defineProperty} from "https://unpkg.com/define-accessor2/dist/define-accessor2.esm.js"
 //or minified version
@@ -61,7 +60,24 @@ import {defineProperty} from "https://unpkg.com/define-accessor2/dist/define-acc
 ## Try it!
 https://jsfiddle.net/DigitalBrain/uw01do2m/
 ## Usage examples
-Basic writable accessor/property
+Basic usage:
+````javascript
+class Skunk{
+        constructor(name){
+            this[_name]= name;//set value to private property
+        }
+        sayName(){
+            console.log(this[_name]);
+        }
+    }
+    //_name variable contains a symbol that you can use to refer a private property of the object inside the class
+    const _name= defineAccessor(Skunk.prototype, 'name');
+    const skunk= new Skunk('Stinky');
+    //now every skunk instance has a read-only public property 'name' which refers to the private writable value
+    console.log(skunk.name); // "Stinky"
+    skunk.sayName(); // "Stinky"
+````
+Writable accessor/property
 ```javascript
     const user= {};
 
@@ -86,22 +102,6 @@ Basic writable accessor/property
         set name: ƒ (newValue)
         __proto__: Object
      */
-```
-Define a read-only public property 'name' which refers to auto-created internal property
-```javascript
-    class Spider{
-        constructor(){
-            this[nameProp] = "Donald"; //change internal property value
-        }
-    }
-    
-    const nameProp= defineAccessor(Spider.prototype, 'name'); 
-
-    const spider= new Spider();
-
-    console.log(spider.name); //Donald
-
-    spider.name= "Jack"; //Error: Unable to rewrite read-only property [name] of [object Object]
 ```
 With default getter
 ````javascript
@@ -136,8 +136,8 @@ Accessor referring
     const {name, surname}= defineAccessor(User.prototype, {
         name: {
             set: normalize,
-            touches: 'fullName', //flush getter cache of fullName property on set
-            value: 'Jon' //append value
+            touches: 'fullName', //flush getter cache of the fullName property on setting
+            value: 'Jon' //append a value
         },
         surname: {
             set: normalize,
@@ -247,13 +247,35 @@ Chains:
     console.log(duck.getName()); //'Donald'
     console.log(duck.getWeight()); //10
 ````
+definition of several accessors at once with same descriptor
+````javascript
+class Skunk{}
+
+const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], {
+        get(prop, privateValue){ // just one getter for all accessors
+            console.log(`Getting [${prop}], private value is [${privateValue}]`);
+            return privateValue;
+        },
+
+        set(newValue, prop, currentValue){
+            switch(prop){
+                case 'weight':
+                    //some code
+                    //return newValueToSet;
+                    break;
+                case 'health':
+                    break;
+            }
+        }
+    })
+````
 ## API
 
-### defineAccessor(obj: Object, prop: String|Symbol, [options: Object]): \<AccessorDescriptor\>
+### defineAccessor(obj: Object, prop: String|Symbol, [descriptor: Object]): Symbol
 
   - `obj:Object` target
   - `props:String|Symbol` a key for accessor's property. 
-  - `[options: Object]`
+  - `[descriptor: Object]` accessor descriptor
       - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- a default getter will be set
       - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
@@ -267,15 +289,22 @@ Chains:
       - `enumerable: Boolean`
   
   **returns** a symbol key of the private property
-### defineAccessor(obj: Object, props: Object): \<Object\<AccessorDescriptor\>\>
+### defineAccessor(obj: Object, props: Object): Object
   - `obj:Object` target object
-  - `props:Object` properties map
+  - `props:Object<Symbol>` properties map
   
+   returns Object<String|Symbol>
+### defineAccessor(obj: Object, props: Array): Array
+  - `obj:Object` target object
+  - `props:Array<String|Symbol>` properties key list  
+  - `[descriptor: Object]` accessor descriptor
+  
+  returns Array<String|Symbol>
 ### `flush(context: Object, propKey: String|Symbol):Boolean` - flush accessor's cache 
-  **returns** true if done
   - `obj:Object` target object
   - `propKey:String|Symbol` public accessor's key
-
+  
+  **returns** true if flushed successfully
 ## Contribution
  Feel free to fork, open issues, enhance or create pull requests. 
 ## License
