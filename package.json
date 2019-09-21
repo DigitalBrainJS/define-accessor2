@@ -1,6 +1,6 @@
 {
   "name": "define-accessor2",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Define feature-rich accessors/properties for your classes",
   "main": "index.js",
   "module": "./dist/define-accessor2.esm.js",
