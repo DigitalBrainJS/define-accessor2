@@ -289,15 +289,16 @@ const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], 
       - `enumerable: Boolean`
   
   **returns** a symbol key of the private property
-### defineAccessor(obj: Object, props: Object): Object
+### defineAccessor(obj: Object, props: Object, [options: Object]): Object
   - `obj:Object` target object
   - `props:Object<Symbol>` properties map
-  
+  - `[descriptor: Object]` accessor descriptor
+    - `[prefix: String]` add prefix to each string key in the result object
+    
    returns Object<String|Symbol>
 ### defineAccessor(obj: Object, props: Array): Array
   - `obj:Object` target object
   - `props:Array<String|Symbol>` properties key list  
-  - `[descriptor: Object]` accessor descriptor
   
   returns Array<String|Symbol>
 ### `flush(context: Object, propKey: String|Symbol):Boolean` - flush accessor's cache 
