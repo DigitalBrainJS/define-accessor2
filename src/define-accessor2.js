@@ -347,5 +347,3 @@ export function flush(obj, prop) {
 
     return false;
 }
-
-export default defineAccessor;

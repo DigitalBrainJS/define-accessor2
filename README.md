@@ -11,7 +11,7 @@
 # Features
 - :zap: lazy computed properties - computes the value once on reading
 - :zap: cached property - uses a getter only after the value 
-has been changed or marked as deprecated using the flush method
+has been changed or marked as deprecated using the flush function
 - :zap: chaining methods - it can add the chaining methods like get**PropName** and set**PropName** to the object.
 - :zap: automatically flushes the getter cache after changing related properties
 - virtual property - without private associated property
@@ -33,8 +33,6 @@ $ yarn add define-property2
 ```
 
 ````javascript 
-import defineAccessor from 'define-accessor2/esm';
-//OR
 import {defineAccessor, flush} from 'define-accessor2/esm';
 //OR
 const {defineAccessor, flush}= require('define-accessor2');   
@@ -279,7 +277,7 @@ const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], 
       - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- a default getter will be set
       - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
-      - `cached: Boolean` cache result of the getter until it will be flush by user or some other property will touch it
+      - `cached: Boolean` cache result of the getter until it will be flushed manually by the flush function or some other property touched it
       - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
       - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that the value of the specified accessors depends on this.
       - `value:Any` a value to set
