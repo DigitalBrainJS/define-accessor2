@@ -85,6 +85,7 @@ Writable accessor/property
             return privateValue.trim().replace(/\w/, (str)=> str.toUpperCase())
         },
         writable: true, //writable from the public api
+        validate: (value)=> typeof value==='string',
         value: '' //initial value
     });
 
@@ -277,12 +278,13 @@ const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], 
       - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- a default getter will be set
       - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
+      - `validate: Function` validate value before calling the setter. An error will be thrown if a false value is returned by the function. 
       - `cached: Boolean` cache result of the getter until it will be flushed manually by the flush function or some other property touched it
       - `lazy: Boolean` indicates whether the accessor should be a lazy computing property
       - `touches: String|Symbol|Array<String|Symbol>` flush caches of targeted accessors on change. Indicates that the value of the specified accessors depends on this.
       - `value:Any` a value to set
       - `chains:Boolean` generate&append setter&getter chains like setProp(value):this and getProp() to the target object
-      - `virtual:Boolean` indicates whether an internal property should be created
+      - `virtual:Boolean` indicates whether an internal property should be created. This internal property is used for storing private value of a public property.
       - `configurable: Boolean`
       - `enumerable: Boolean`
   

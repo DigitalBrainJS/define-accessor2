@@ -41,6 +41,28 @@ describe("defineProperty", function () {
         });
     });
 
+    it("should throw when validate is not function", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                validate: {}
+            });
+        }).to.throw(Error, /should be a function/);
+    });
+
+    it("should throw when validate attached to non writable property", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                validate: ()=>{}
+            });
+        }).to.throw(Error, /validate can be used for writable property only/);
+    });
+
     it("should create new public prop with string key", function () {
         const obj = {};
         const propName = 'prop';
@@ -105,6 +127,21 @@ describe("defineProperty", function () {
         }).to.throw(Error, /read-only|rewrite/);
     });
 
+    describe("validation", function () {
+        it("should throw when validate function return false", function () {
+            const obj = {};
+            const propName = "prop";
+
+            defineAccessor(obj, propName, {
+                validate: ()=> false,
+                writable: true
+            });
+
+            expect(() => {
+                obj[propName] = null;
+            }).to.throw(Error, /is not valid/);
+        });
+    });
 
     describe("in cached mode", function () {
         it("should throw if no getter were passed", function () {

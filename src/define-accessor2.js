@@ -47,7 +47,8 @@ const prepareAccessor = (obj, prop, descriptor) => {
         writable = !!set,
         chains,
         virtual,
-        lazy
+        lazy,
+        validate
     } = descriptor;
 
     let {
@@ -145,8 +146,25 @@ const prepareAccessor = (obj, prop, descriptor) => {
         throw Error(`missing setter for writable virtual prop [${propName}]`);
     }
 
+    if (validate) {
+        if (typeof validate !== 'function') {
+            throw TypeError('validate should be a function');
+        }
+
+        if (!writable) {
+            throw TypeError('validate can be used for writable property only');
+        }
+    }
+
+    const _validate = validate && function (value) {
+        if (validate.call(this, value, prop) === false) {
+            throw Error(`value (${value}) is not valid for property (${propName})`);
+        }
+    };
 
     const setter = set ? function (value) {
+        validate && _validate.call(this, value);
+
         if (virtual) {
             const cachedFlag = set.call(this, value, prop);
 
@@ -182,6 +200,8 @@ const prepareAccessor = (obj, prop, descriptor) => {
         }
     } : (writable ? function (newValue) {
         if (newValue !== this[symbol]) {
+            validate && _validate.call(this, newValue);
+
             if (cached) {
                 this[symbolCache] = UNDEFINED_VALUE;
             }
