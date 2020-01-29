@@ -80,7 +80,7 @@ Writable accessor/property
     const user= {};
 
     defineAccessor(user, 'name', {
-        get(propName, privateValue){
+        get(privateValue, propName){
             //compute some public prop value
             return privateValue.trim().replace(/\w/, (str)=> str.toUpperCase())
         },
@@ -107,7 +107,7 @@ With default getter
 class Cat{}
 
     defineAccessor(Cat.prototype, 'name', {
-        set(newValue, prop, privateValue){
+        set(newValue, privateValue, prop){
             console.log('Setter:', newValue, prop, privateValue);
             return newValue.toUpperCase(); //set newValue to the private property this[Symbol(@@name)]
         }
@@ -126,7 +126,7 @@ class Cat{}
         __proto__: Object
      */
 ````
-Accessor referring
+Accessor reference
 ````javascript
     class User{}
     //some property value modifier
@@ -251,12 +251,12 @@ definition of several accessors at once with same descriptor
 class Skunk{}
 
 const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], {
-        get(prop, privateValue){ // just one getter for all accessors
+        get(privateValue, prop){ // just one getter for all accessors
             console.log(`Getting [${prop}], private value is [${privateValue}]`);
             return privateValue;
         },
 
-        set(newValue, prop, currentValue){
+        set(newValue, currentValue, prop){
             switch(prop){
                 case 'weight':
                     //some code
@@ -275,8 +275,8 @@ const [_weight, _health]= defineAccessor(Skunk.prototype, ['weight', 'health'], 
   - `obj:Object` target
   - `props:String|Symbol` a key for accessor's property. 
   - `[descriptor: Object]` accessor descriptor
-      - `get(prop:String|Symbol, privateValue: Any)` accessor's getter, if undefined- a default getter will be set
-      - `set(newValue:Any, prop:String|Symbol, privateValue: Any)` accessor's setter, if undefined and writable option is set- the default setter will be set
+      - `get(privateValue: Any, prop:String|Symbol)` accessor's getter, if undefined- a default getter will be set
+      - `set(newValue:Any, privateValue: Any, prop:String|Symbol)` accessor's setter, if undefined and writable option is set- the default setter will be set
       - `writable: Boolean` makes sense when the setter is not defined
       - `validate: Function` validate value before calling the setter. An error will be thrown if a false value is returned by the function. 
       - `cached: Boolean` cache result of the getter until it will be flushed manually by the flush function or some other property touched it

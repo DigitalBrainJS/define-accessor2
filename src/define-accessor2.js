@@ -44,11 +44,11 @@ const prepareAccessor = (obj, prop, descriptor) => {
         cached,
         configurable,
         enumerable,
-        writable = !!set,
+        validate,
+        writable = !!(set || validate),
         chains,
         virtual,
-        lazy,
-        validate
+        lazy
     } = descriptor;
 
     let {
@@ -135,9 +135,9 @@ const prepareAccessor = (obj, prop, descriptor) => {
             return value;
         }
 
-        return (context[symbolCache] = (virtual ? get.call(context, prop) : get.call(context, prop, context[symbol])));
+        return (context[symbolCache] = (virtual ? get.call(context, prop) : get.call(context, context[symbol], prop)));
     } : (get ? function () {
-        return virtual ? get.call(this, prop) : get.call(this, prop, this[symbol])
+        return virtual ? get.call(this, prop) : get.call(this, this[symbol], prop)
     } : function () {
         return this[symbol];
     });
@@ -187,7 +187,7 @@ const prepareAccessor = (obj, prop, descriptor) => {
 
         } else {
             const currentValue = this[symbol];
-            const newValue = set.call(this, value, prop, currentValue);
+            const newValue = set.call(this, value, currentValue, prop);
 
             if (newValue !== currentValue) {
 

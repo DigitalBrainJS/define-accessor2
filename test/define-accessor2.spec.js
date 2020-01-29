@@ -58,7 +58,8 @@ describe("defineProperty", function () {
 
         expect(() => {
             defineAccessor(obj, propName, {
-                validate: ()=>{}
+                validate: ()=>{},
+                writable: false
             });
         }).to.throw(Error, /validate can be used for writable property only/);
     });
