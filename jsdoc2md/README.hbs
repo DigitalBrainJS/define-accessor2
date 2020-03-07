@@ -1,0 +1,169 @@
+# define-accessor2
+[![Build Status](https://travis-ci.com/DigitalBrainJS/define-accessor2.svg?branch=master)](https://travis-ci.com/DigitalBrainJS/define-accessor2)
+[![](https://badgen.net/npm/license/define-accessor2)](https://unpkg.com/define-accessor2/dist/define-accessor2.umd.js)
+[![Coverage Status](https://coveralls.io/repos/github/DigitalBrainJS/define-accessor2/badge.svg?branch=master)](https://coveralls.io/github/DigitalBrainJS/define-accessor2?branch=master)
+[![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
+[![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
+
+:star: An extended version of Object.defineProperty function. Define feature-rich properties for your objects :star:
+
+# Features
+- lazy properties
+- cached properties - cache the value returned by the getter. Cached value can be flushed later
+- validation handler
+- Joi validation out of the box
+- built-in basic type system
+- automatically flushes getter cache after changing related properties
+- defining custom validators
+- creating isolated contexts to define validators in a local scope
+- chaining methods - can create chaining methods like get**PropName** and set**PropName**
+
+## Installation
+
+Install for node.js using npm/yarn:
+
+``` bash
+$ npm install define-property2 --save
+```
+
+``` bash
+$ yarn add define-property2
+```
+
+````javascript
+const {defineAccessor, flushAccessor}= require('define-accessor2');
+````
+
+## Usage examples
+````javascript
+     const {defineAccessor, TYPE_NUMBER, TYPE_STRING}= require('define-accessor2');
+     const obj= {};
+
+     defineAccessor(obj, 'someProp', {
+         type: 'string|number'
+      });
+      //or using bit mask
+      defineAccessor(obj, 'someProp', {
+         type: TYPE_STRING|TYPE_NUMBER
+      });
+````
+Validate with Joi:
+````javascript
+     const {defineAccessor}= require('define-accessor2');
+     const Joi = require('@hapi/joi');
+     const user= {};
+
+     defineAccessor(user, 'age', {
+        validate: Joi.number().integer().min(0).max(100),
+        set(newValue, prevValue){
+            //do some work
+            return newValue; //set newValue to the property age
+        }
+     });
+
+    user.age= 30; //ok, now age= 30
+    user.age= 150; //ValidationError: value (150) is not valid for property (age). Reason: "value" must be less than or equal to 100
+````
+Custom validator:
+````javascript
+     //import library and create new context for local validator definition
+     const {defineAccessor, defineValidator}= require('define-accessor2').newContext();
+     const validator= require('validator');
+     const model= {};
+
+    defineValidator({
+        mongoId: validator.isMongoId
+    });
+
+    defineAccessor(model, 'id', {
+        validate: 'mongoId'
+    });
+
+    model.age= 30; //ok, now age= 30
+    model.age= 150; //ValidationError: value (150) is not valid for property (age). Reason: "value" must be less than or equal to 100
+````
+````javascript
+const {defineAccessor, flushAccessor}= require('define-accessor2');
+const hash = require('object-hash');
+
+const obj= {};
+
+const normalize = (str)=> str.replace(/^\w/, (str)=> str.toUpperCase());
+
+const {_name}= defineAccessor(obj, {
+    hash: {
+        get(){
+            return hash(this);
+        },
+        cached: true
+    },
+    name: {
+        validate(value, {reject}){
+            typeof value!=='string' && reject('must be a string');
+            value= value.trim();
+            !/^[a-zA-Z]+$/.test(value) && reject('only a-zA-Z allowed');
+            value.length<=3 && reject('length should be greater than 3');
+            return value;
+        },
+        set: normalize,
+        touches: ['hash'],
+        value: 'Jon'
+    },
+
+    email: {
+        validate: validator.isEmail
+    }
+
+}, {prefix: '_'})
+
+````
+
+## Functional diagram
+![Accessor functional diagram](https://github.com/DigitalBrainJS/define-accessor2/raw/master/public/accessor.png)
+
+## API
+
+{{>main}}
+
+## Built-in types
+The library's type system consist of native JS types and extended pseudotypes.
+The following types do not overlap, unlike native javascript types.
+For example, null is not an object, NaN is not a number, and so on.
+- Undefined (TYPE_UNDEFINED)
+- Null (TYPE_NULL)
+- Boolean (TYPE_BOOLEAN)
+- Number (TYPE_NUMBER)
+- String (TYPE_STRING)
+- Function (TYPE_FUNCTION)
+- Object (TYPE_OBJECT)
+- Symbol (TYPE_SYMBOL)
+- BigInt (TYPE_BIGINT)
+- Array (TYPE_ARRAY)
+- Infinity (TYPE_INFINITY)
+- NaN (TYPE_NAN)
+- Date (TYPE_DATE)
+- Promise (TYPE_PROMISE)
+- RegExp (TYPE_REGEXP)
+- Error (TYPE_ERROR)
+- Set (TYPE_SET)
+- Map (TYPE_MAP)
+
+An exception is the integer pseudotype which is an integer and a number types.
+- Integer (TYPE_INTEGER)
+Special type:
+- Any (TYPE_ANY)
+
+There are predicates for each type named like isUndefined(value), isNumber(value) etc.
+
+## Contribution
+Feel free to fork, open issues, enhance or create pull requests.
+## License
+
+The MIT License
+Copyright (c) 2019 Dmitriy Mozgovoy <robotshara@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

@@ -1,11 +1,13 @@
-import {defineAccessor} from "../dist/define-accessor2.esm";
-import chai from "chai";
+const {defineAccessor, defineValidator} =require('../src/define-accessor2');
+const {resolvePredicate, tagOf}=require('../src/types');
+const chai=require('chai');
+const Joi = require('@hapi/joi');
 
 const {expect} = chai;
 
 const global = new Function("return this")();
 
-describe("defineProperty", function () {
+describe('defineProperty', function () {
     const asserts = {
         boolean: true,
         number: 1,
@@ -15,7 +17,7 @@ describe("defineProperty", function () {
     it(`should throw if prop is not a string or symbol`, function () {
         const obj = {};
         Object.keys(asserts).forEach((type) => {
-            const value= asserts[type];
+            const value = asserts[type];
             expect(() => {
                 defineAccessor(obj, value, {});
             }).to.throw(TypeError, /prop/i, `Passing [${value}] of [${type}] type doesn't throw`);
@@ -41,15 +43,27 @@ describe("defineProperty", function () {
         });
     });
 
-    it("should throw when validate is not function", function () {
+    it("should throw if validate is not function|joi schema|known validator name", function () {
         const obj = {};
         const propName = "prop";
 
         expect(() => {
             defineAccessor(obj, propName, {
+                validate: 123
+            });
+        }).to.throw(Error, /should be a function/, `function`);
+
+        expect(() => {
+            defineAccessor(obj, propName, {
                 validate: {}
             });
-        }).to.throw(Error, /should be a function/);
+        }).to.throw(Error, /Unknown validator type/);
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                validate: "unknown"
+            });
+        }).to.throw(Error, /Unknown validator/);
     });
 
     it("should throw when validate attached to non writable property", function () {
@@ -58,7 +72,8 @@ describe("defineProperty", function () {
 
         expect(() => {
             defineAccessor(obj, propName, {
-                validate: ()=>{},
+                validate: () => {
+                },
                 writable: false
             });
         }).to.throw(Error, /validate can be used for writable property only/);
@@ -134,13 +149,31 @@ describe("defineProperty", function () {
             const propName = "prop";
 
             defineAccessor(obj, propName, {
-                validate: ()=> false,
+                validate: () => false,
                 writable: true
             });
 
             expect(() => {
                 obj[propName] = null;
             }).to.throw(Error, /is not valid/);
+        });
+
+        it("should support Joi schema", function () {
+            const obj = {};
+            const propName = "prop";
+
+            defineAccessor(obj, propName, {
+                validate: Joi.number(),
+                writable: true
+            });
+
+            expect(() => {
+                obj[propName] = null;
+            }).to.throw(Error, /is not valid/);
+
+            expect(() => {
+                obj[propName] = 123;
+            }).to.not.throw(Error);
         });
     });
 
@@ -238,46 +271,133 @@ describe("defineProperty", function () {
     });
 
     describe("definition of several accessors at once", function () {
-        it("should return an array of private keys (symbols) if an array of props were given as second argument", function(){
-            const obj= {};
-            const keys= ["one", "two"];
+        it("should return an array of private keys (symbols) if an array of props were given as second argument", function () {
+            const obj = {};
+            const keys = ["one", "two"];
 
-            const result= defineAccessor(obj, keys);
+            const result = defineAccessor(obj, keys);
 
             expect(result).to.be.an('array');
-            expect(result.every(symbol => typeof symbol==="symbol")).to.be.true;
+            expect(result.every(symbol => typeof symbol === "symbol")).to.be.true;
         });
 
-        it("should return an object of private keys (symbols) if an object of descriptors were given as second argument", function(){
-            const obj= {};
+        it("should return an object of private keys (symbols) if an object of descriptors were given as second argument", function () {
+            const obj = {};
 
-            const result= defineAccessor(obj, {
+            const result = defineAccessor(obj, {
                 one: {},
                 two: {}
             });
 
             expect(result).to.be.an('object');
-            expect(Object.keys(result).every(key => typeof key==="string")).to.be.true;
-            expect(Object.keys(result).every(key => typeof result[key]==="symbol")).to.be.true;
+            expect(Object.keys(result).every(key => typeof key === "string")).to.be.true;
+            expect(Object.keys(result).every(key => typeof result[key] === "symbol")).to.be.true;
         });
 
-        it("should support prefix for keys in the result object", function(){
-            const obj= {};
+        it("should support prefix for keys in the result object", function () {
+            const obj = {};
 
-            const props= {
+            const props = {
                 one: {},
                 two: {}
             };
 
-            const prefix= "_";
+            const prefix = "_";
 
-            const result= defineAccessor(obj, props, {
+            const result = defineAccessor(obj, props, {
                 prefix
             });
 
             expect(result).to.be.an('object');
-            const resultKeys= Object.keys(result);
+            const resultKeys = Object.keys(result);
             expect(Object.keys(props).every(originalKey => resultKeys.includes(prefix + originalKey))).to.be.true;
         })
     });
 });
+
+describe("defineValidator", function () {
+    it("should define a custom validator", function () {
+        const obj = {};
+
+        defineValidator('custom', (value) => value === 'test');
+
+        defineAccessor(obj, 'x', {
+            validator: 'custom'
+        })
+    });
+
+    it("should define multiple validators", function () {
+        const obj = {};
+
+        defineValidator({
+            validator1: ()=> true,
+            validator2: ()=> true
+        });
+
+        defineAccessor(obj, 'x', {
+            validator: 'validator1',
+        });
+
+        defineAccessor(obj, 'y', {
+            validator: 'validator2',
+        })
+    });
+});
+
+describe("type system", function () {
+    const fixture= {
+        "Undefined": [undefined],
+        "Boolean": [true, false],
+        "Number": [1],
+        "NaN": [NaN],
+        "Infinity": [Infinity],
+        "String": [""],
+        "Function": [()=>{}, function(){}, async ()=>{}, function *(){}],
+        "BigInt": [1n],
+        "Symbol": [Symbol()],
+        "Null": [null],
+        "Object": [{}],
+        "Array": [[]],
+        "Date": [new Date()],
+        "RegExp": [/\s/],
+        "Set": new Set(),
+        "Map": new Map(),
+        "Error": [new Error()],
+        "Promise": [Promise.resolve()],
+    };
+
+    const makeTest= (type, positiveValues, negativeValues)=>{
+        describe(`${type} predicate`, function () {
+            const predicate = resolvePredicate(type);
+
+            it(`should return true if value is a type of ${type}`, () => {
+                positiveValues.forEach(value => {
+                    if(type==='object'){
+                        debugger;
+                    }
+                    expect(predicate(value), `value ${tagOf(value)} is not type of ${type}`).to.be.true;
+                });
+            });
+            if(negativeValues) {
+                it(`should return false if value is not a type of ${type}`, () => {
+                    negativeValues.forEach(value => {
+                        expect(predicate(value), `value ${tagOf(value)} is type of ${type}`).to.be.false;
+                    });
+                });
+            }
+        });
+    };
+
+    Object.entries(fixture).forEach(([type, positiveValues])=>{
+        const negativeValues= [];
+        Object.entries(fixture).forEach(([_type, values])=> {
+            if(type!==type){
+                negativeValues.push(...values);
+            }
+        });
+        makeTest(type, positiveValues, negativeValues);
+    });
+
+    makeTest('integer', [1], [1.1, NaN, Infinity]);
+});
+

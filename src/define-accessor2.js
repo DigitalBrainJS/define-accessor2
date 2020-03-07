@@ -1,7 +1,21 @@
-const {defineProperty} = Reflect || Object;
+/**
+ * @module
+ */
+
+// * @alias module:define-accessor2
+
+
+const {isJoiSchema} = require('./utils');
+const types = require('./types');
+const {resolvePredicate, decodeType, tagOf}= types;
+
+
+const {defineProperty, defineProperties} = Object;
 const {hasOwnProperty, toString} = Object.prototype;
 const UNDEFINED_VALUE = Symbol();
 const symbolProps = Symbol('@@PROPS');
+const _validators = Symbol('validators');
+
 const isPlainObject = (obj) => !!obj && toString.call(obj) === '[object Object]';
 const validatePropKey = (prop) => {
     const type = typeof prop;
@@ -22,7 +36,11 @@ const touch = (obj, touches) => {
 };
 
 
-const prepareAccessor = (obj, prop, descriptor) => {
+class ValidationError extends Error {
+}
+
+
+function prepareAccessor(obj, prop, descriptor) {
     const propType = validatePropKey(prop);
 
     const isSymbolProp = propType === 'symbol';
@@ -38,17 +56,27 @@ const prepareAccessor = (obj, prop, descriptor) => {
         throw TypeError('descriptor should be a plain object');
     }
 
-    const {
-        set,
-        get,
+    let {
+        /**
+         * @type ?Function
+         * @private
+         */
+        set = null,
+        /**
+         * @type ?Function
+         * @private
+         */
+        get = null,
         cached,
         configurable,
         enumerable,
+        type,
         validate,
-        writable = !!(set || validate),
+        writable = !!(set || validate || type),
         chains,
         virtual,
-        lazy
+        lazy,
+        value
     } = descriptor;
 
     let {
@@ -74,6 +102,10 @@ const prepareAccessor = (obj, prop, descriptor) => {
     }
 
     const propName = isSymbolProp ? prop.toString().slice(7, -1) : prop;
+
+    if (value !== undefined && !writable && !symbol) {
+        throw Error(`Unable to set init value for read-only virtual accessor ${propName}`);
+    }
 
     if (touches) {
         let type;
@@ -147,7 +179,24 @@ const prepareAccessor = (obj, prop, descriptor) => {
     }
 
     if (validate) {
-        if (typeof validate !== 'function') {
+        const type = typeof validate;
+        if (type === 'string') {
+            const validator = this[_validators][validate];
+            if (!validator) {
+                throw Error(`Unknown validator (${validate}) for property ${propName}`);
+            }
+
+            validate = validator;
+        } else if (type === 'object') {
+            if (!isJoiSchema(validate)) {
+                throw Error(`Unknown validator type for property ${propName}`);
+            }
+
+            const schema = validate;
+
+            const assert = schema.$_root.assert;
+            validate = (value) => assert(value, schema);
+        } else if (type !== 'function') {
             throw TypeError('validate should be a function');
         }
 
@@ -156,21 +205,67 @@ const prepareAccessor = (obj, prop, descriptor) => {
         }
     }
 
+
     const _validate = validate && function (value) {
-        if (validate.call(this, value, prop) === false) {
-            throw Error(`value (${value}) is not valid for property (${propName})`);
+        const reject = (reason) => {
+            throw new ValidationError(`value (${value}) is not valid for property (${propName})` +
+                (reason ? '. Reason: ' + reason : ''));
+        };
+
+        try {
+            const validationResult = validate.call(this, value, {
+                set: (_value) => {
+                    value = _value;
+                }, reject, prop
+            });
+
+            if (validationResult === false) {
+                reject(typeof validationResult === 'string' ? validationResult : '');
+            }
+        } catch (err) {
+            if (err.name === 'ValidationError') {
+                reject(err.message);
+            } else {
+                throw err;
+            }
         }
     };
 
+    const checkType = type && (() => {
+        if (typeof type !== 'string' && !Number.isInteger(type)) {
+            throw TypeError('type must be an integer or string[]');
+        }
+
+        const predicate = resolvePredicate(type);
+
+        return (value) => {
+            if (!predicate(value)) {
+                const types = decodeType(type),
+                    message = `Property ${propName} accepts ${types.length > 1 ? types.join('|') : types[0]},` +
+                        ` but ${tagOf(value)} given`;
+                throw TypeError(message);
+            }
+        }
+    })();
+
     const setter = set ? function (value) {
-        validate && _validate.call(this, value);
+
+        checkType && checkType(value);
+
+        if (validate) {
+            const returnedValue = _validate.call(this, value);
+            if (returnedValue !== undefined) {
+                value = returnedValue;
+            }
+        }
 
         if (virtual) {
             const cachedFlag = set.call(this, value, prop);
 
             if (cached || touches) {
                 if (cachedFlag !== true && cachedFlag !== false) {
-                    throw Error(`setter of the virtual cached prop [${propName}] should return a boolean flag indicating whether the value has been changed inside`);
+                    throw Error(`setter of the virtual cached prop [${propName}] should return ` +
+                        `a bool flag indicating whether the value has been changed inside`);
                 }
 
                 if (cachedFlag) {
@@ -200,7 +295,14 @@ const prepareAccessor = (obj, prop, descriptor) => {
         }
     } : (writable ? function (newValue) {
         if (newValue !== this[symbol]) {
-            validate && _validate.call(this, newValue);
+            checkType && checkType(newValue);
+
+            if (validate) {
+                const returnedValue = _validate.call(this, newValue);
+                if (returnedValue !== undefined) {
+                    newValue = returnedValue;
+                }
+            }
 
             if (cached) {
                 this[symbolCache] = UNDEFINED_VALUE;
@@ -214,7 +316,7 @@ const prepareAccessor = (obj, prop, descriptor) => {
 
     if (chains) {
         if (!propName) {
-            throw Error(`can not create named chain for anonymous symbol property`);
+            throw Error(`can't create named chain for anonymous symbol property`);
         }
         let chainName = typeof chains === 'string' ? chains.trim() : propName.replace(/[^A-Za-z][^-A-Za-z0-9_]*/, '');
         if (!chainName) {
@@ -235,7 +337,9 @@ const prepareAccessor = (obj, prop, descriptor) => {
                 if (length === 1) {
                     setter.call(this, value);
                 } else {
-                    throw Error(length ? `too much arguments [${length}] were passed to [${setterName}] accessor` : `accessor [${setterName}] requires a value`);
+                    throw Error(length ?
+                        `too much arguments [${length}] were passed to [${setterName}] accessor` :
+                        `accessor [${setterName}] requires a value`);
                 }
                 return this;
             }
@@ -247,123 +351,343 @@ const prepareAccessor = (obj, prop, descriptor) => {
     return {
         symbol,
         symbolCache,
-        writable,
-        descriptor: {
-            get: getter,
-            set: setter,
-            configurable,
-            enumerable
-        }
+        readonly: !writable,
+        get: getter,
+        set: setter,
+        configurable,
+        enumerable,
+        initValue: value
     }
-};
-
-function define(obj, prop, options = {}) {
-    const {
-        symbol,
-        descriptor,
-        writable
-    } = prepareAccessor(obj, prop, options);
-
-    defineProperty(obj, prop, descriptor);
-
-    const {value} = options;
-
-    if ('value' in options) {
-        if (writable) {
-            descriptor.set.call(obj, value);
-        } else {
-            obj[symbol] = value;
-        }
-    }
-
-    return symbol;
 }
+
+
+
+/**
+ * @typedef {Function} SetterFunction
+ * @param {any} newValue new value to set
+ * @param {any} currentValue current private value
+ * @param {PropertyKey} propKey public property key
+ * @returns {any} value to store in the private property
+ */
+
+/**
+ * @typedef {Function} GetterFunction
+ * @param {any} currentValue current private value
+ * @param {PropertyKey} propKey public property key
+ * @returns {any}
+ */
+
+/**
+ * @typedef {Function} ValidateFunction
+ * @param {any} value value to validate
+ * @param {PropertyKey} propKey public property key
+ * @returns {Boolean}
+ * @throws Error
+ */
 
 /**
  * @typedef {String|Symbol} PropertyKey
  */
 
 /**
- * Accessor's descriptor.
- * @typedef {Object} AccessorDescriptor
- * @property {Function} [get] accessor getter
- * @property {Function} [set] accessor setter
- * @property {Boolean} [writable]
- * @property {Boolean} [enumerable]
- * @property {Boolean} [configurable]
- * @property {Boolean} [cached]
- * @property {Boolean} [lazy]
- * @property {Boolean} [virtual]
- * @property {Boolean} [chains]
- * @property {PropertyKey|PropertyKey[]} [touches]
- * @property {*} [value]
+ * @typedef {Symbol} PrivatePropKey
  */
 
 /**
- * Defines an accessor
- *
- * @param {Object} obj target object
- * @param {PropertyKey} prop  property key
- * @param {AccessorDescriptor} [descriptor]
- * @returns {Symbol}
- * //**
- *
- * @param {Object} obj target object
- * @param {Array.<PropertyKey>} prop  property key
- * @param {AccessorDescriptor} [descriptor]
- * @returns {Array.<Symbol>}
- * //**
- *
- * @param {Object} obj target object
- * @param {Object.<PropertyKey>} prop  property key
- * @param {Object} [options]
- * @param {String} [options.prefix]
- * @returns {Object.<Symbol>}
+ * Accessor's descriptor.
+ * @typedef {Object} AccessorDescriptor
+ * @property {GetterFunction} [get= null] getter function
+ * @property {SetterFunction} [set= null] setter function
+ * @property {Boolean} [writable= false] if setter is not present indicates whether accessor's value can be set
+ * @property {Boolean} [enumerable= false]
+ * @property {Boolean} [configurable= false]
+ * @property {Boolean} [cached= false] cache getter result until it will be flushed by flushAccessor or other related accessor
+ * @property {Boolean} [lazy= false] indicates whether the accessor should be a lazy computing property
+ * @property {Boolean} [virtual= false] if true a private property is not created
+ * @property {Boolean} [chains= false] create get/set chains for property (like getPropName()/setPropName(value))
+ * @property {PropertyKey|PropertyKey[]} [touches= null] a key of accessor whose value depends on this
+ * @property {BasicType} [type= null] built-type
+ * @property {ValidateFunction} [validate= null] validator function
+ * @property {*} [value] value to set after initialization
  */
 
-export function defineAccessor(obj, prop, descriptor = {}) {
-    if (typeof prop === 'object') {
-        if (Array.isArray(prop)) {
-            return prop.map(prop => define(obj, prop, descriptor));
+/**
+ * Library context class
+ */
+
+class Context{
+    constructor(parentContext= null){
+        this[_validators]= Object.create(parentContext);
+
+        Object.defineProperties(this, ['defineAccessor', 'flushAccessor', 'defineValidator']
+            .reduce((descriptor, name) => {
+                descriptor[name]= {
+                    value: this[name].bind(this)
+                };
+                return descriptor;
+            }, {}))
+    }
+
+    /**
+     * Defines a single accessor
+     * @param {Object} obj target object
+     * @param {PropertyKey} prop  property key
+     * @param {AccessorDescriptor} [descriptor]
+     * @returns {PrivatePropKey}
+     * @alias module:define-accessor2#defineAccessor
+     * @example
+     * defineAccessor(obj, "age", {
+     *     get(){
+     *         return 99;
+     *     }
+     * })
+     *//**
+     * Defines several accessors with the same descriptor
+     * @param {Object} obj target object
+     * @param {Array.<PropertyKey>} props  properties list
+     * @param {AccessorDescriptor} [descriptor]
+     * @returns {Array.<PrivatePropKey>}
+     * @alias module:define-accessor2#defineAccessor
+     * @example
+     * defineAccessor(obj, ["name", "surname"], {
+     *     get(privateValue, propKey){
+     *         switch(propKey){
+     *             case 'name':
+     *              return 'John';
+     *             case 'surname':
+     *              return 'Connor';
+     *         }
+     *     }
+     * })
+     *//**
+     * Defines several accessors using hash map
+     * @param {Object} obj target object
+     * @param {Object.<PropertyKey>} props  properties hash map
+     * @param {!Object} [options]
+     * @param {String} [options.prefix] add prefix for each property key of the returning object
+     * @returns {Object.<PrivatePropKey>} object of private properties that refer to the defined accessors
+     * @alias module:define-accessor2#defineAccessor
+     * @example
+     * const {_name, _surname}= defineAccessor(obj, {
+     *     name: {
+     *         get(){
+     *             return 'John';
+     *         }
+     *     },
+     *
+     *     surname: {
+     *         get(){
+     *             return 'Connor';
+     *         }
+     *     }
+     * }, {
+     *     prefix: '_'
+     * })
+     */
+
+     defineAccessor(obj, arg1, arg2 = {}) {
+         const descriptors = {};
+
+         const buildDescriptor = (prop, options = {}) => {
+             const descriptor= prepareAccessor.call(this, obj, prop, options);
+             descriptors[prop] = descriptor;
+             return descriptor.symbol;
+         };
+
+         const initProps = () => {
+             defineProperties(obj, descriptors);
+             Object.entries(descriptors).forEach(([prop, {initValue, symbol, readonly}]) => {
+                 if (initValue !== undefined) {
+                     if (readonly) {
+                         this[symbol] = initValue;
+                     } else {
+                         this[prop] = initValue;
+                     }
+                 }
+             });
+         };
+
+        let result;
+
+        if (typeof arg1 === 'object') {
+            if (Array.isArray(arg1)) {
+                result= arg1.map(prop => buildDescriptor(prop, arg2));
+            } else {
+                if (arg2 !== undefined && !isPlainObject(arg2)) {
+                    throw TypeError(`Options should be a plain object`);
+                }
+
+                const {
+                    prefix
+                } = arg2 || {};
+
+                if (prefix && typeof prefix !== 'string') {
+                    throw TypeError('prefix options should be a string');
+                }
+
+                const props = arg1;
+                result= Object.keys(props).reduce((descriptors, prop) => {
+                    descriptors[(prefix && typeof prop === 'string' ? prefix : '') + prop] = buildDescriptor(prop, props[prop]);
+                    return descriptors;
+                }, {});
+            }
+        }else{
+            result=  buildDescriptor(arg1, arg2);
+        }
+
+        initProps();
+
+        return result;
+    }
+
+    /**
+     * flush accessor's cache
+     * @param obj {Object} target object
+     * @param prop {PropertyKey} public accessor's key
+     * @returns {boolean} true if flushed successfully
+     * @alias module:define-accessor2#flushAccessor
+     * @example
+     * defineAccessor(obj, "hash", {
+     *     get(){
+     *         return calcObjectSHA(this);
+     *     }
+     * })
+     * flushAccessor(obj, 'hash')
+     */
+
+    flushAccessor(obj, prop) {
+        const propsMap = obj && obj[symbolProps];
+        let cacheKey;
+
+        if (propsMap && (cacheKey = propsMap[prop])) {
+            obj[cacheKey] = UNDEFINED_VALUE;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @typedef {Function} ValidatorPredicate
+     * @param {any} value - value to test
+     * @returns {Boolean}
+     */
+
+    /**
+     * Defines a new validator in the current library context
+     * @param {String} name validator's name
+     * @param {ValidatorPredicate} fn validator predicate function
+     * @returns {this}
+     * @alias module:define-accessor2#defineValidator
+     * @example
+     * const validator = require('validator');
+     * defineValidator('email', validator.isEmail);
+     *//**
+     * Defines a new validator in the current library context
+     * @param {{ValidatorPredicate}} validators
+     * @alias module:define-accessor2#defineValidator
+     * @example
+     * const validator = require('validator');
+     * defineValidator({
+     *  email: validator.isEmail,
+     *  ip: validator.isIP
+     * });
+     */
+
+    defineValidator(arg0, arg1) {
+        const define = (name, fn) => {
+            name = name.trim();
+
+            if (!/^\w+$/gi.test(name)) {
+                throw Error('validator name can consist of a-z, A-Z, 0-9 and _ charters ')
+            }
+            if (typeof fn !== 'function') {
+                throw TypeError('validator must be a function');
+            }
+            this[_validators][name] = fn;
+        };
+
+        if (arguments.length === 1) {
+            Object.entries(arg0).forEach(([name, fn]) => define(name, fn));
         } else {
-            if (descriptor !== undefined && !isPlainObject(descriptor)) {
-                throw TypeError(`Options should be a plain object`);
-            }
-
-            const {
-                prefix
-            } = descriptor || {};
-
-            if (prefix && typeof prefix !== 'string') {
-                throw TypeError('prefix options should be a string');
-            }
-
-            const props = prop;
-            return Object.keys(props).reduce((descriptors, prop) => {
-                descriptors[(prefix && typeof prop === 'string' ? prefix : '') + prop] = define(obj, prop, props[prop]);
-                return descriptors;
-            }, {});
+            define(arg0, arg1);
         }
     }
 
-    return define(obj, prop, descriptor);
-}
+    /**
+     * Basic type.
+     * @typedef {Number|String} BasicType
+     */
 
-/**
- * flush accessor's cache
- * @param obj {Object} target object
- * @param prop {PropertyKey} public accessor's key
- * @returns {boolean} true if flushed successfully
- */
+    /**
+     * @typedef {Function} AssertionFunction
+     * @param {Any} value value to test
+     * @return {Boolean} false if test failed
+     */
 
-export function flush(obj, prop) {
-    const propsMap = obj && obj[symbolProps];
-    let cacheKey;
+    /**
+     * resolve predicate for type
+     * @function resolvePredicate
+     * @param {BasicType} type
+     * @returns {AssertionFunction} assertion function
+     * @alias module:define-accessor2#resolvePredicate
+     */
 
-    if (propsMap && (cacheKey = propsMap[prop])) {
-        obj[cacheKey] = UNDEFINED_VALUE;
-        return true;
+    /**
+     * creates a new library context
+     * @alias module:define-accessor2#newContext
+     * @returns {Context}
+     * @example
+     * const {defineAccessor, flushAccessor}= require('define-accessor2').newContext()
+     * //define custom validators for the current and inherited from the current contexts only
+     * defineValidator({
+     *     even: (value)=> typeof value && value % 2===0,
+     *     odd: (value)=> typeof value && Math.abs(value % 2)===1,
+     * });
+     */
+
+    newContext(){
+        return new Context(this);
     }
 
-    return false;
 }
+
+Object.defineProperties(Context.prototype, Object.entries(types).reduce((descriptors, [prop, value]) => {
+    descriptors[prop] = {
+        value
+    };
+    return descriptors;
+}, {}));
+
+
+
+
+/*
+- Undefined
+- Null
+- Boolean
+- Number
+- String
+- Function
+- Object
+- Symbol
+- BigInt
+- Array
+- Infinity
+- NaN
+- Integer
+- Date
+- Promise
+- RegExp
+- Error
+- Set
+- Map
+*/
+
+/**
+ * The default library context. Call context.newContext() to
+ * return a new context inherited from the current context.
+ * This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
+ */
+
+module.exports= new Context();
