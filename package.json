@@ -11,7 +11,7 @@
     "docs": "jsdoc2md -t jsdoc2md/README.hbs src/define-accessor2.js > README.md",
     "docs2": "jsdoc2md src/define-accessor2.js > README.md",
     "jsdoc": "jsdoc src/define-accessor2.js",
-    "prepublishOnly": "npm run test && npm docs",
+    "prepublishOnly": "npm test && npm run docs",
     "postversion": "git push && git push --tags",
     "lint": "eslint src",
     "codacy-coverage": "cat ./coverage/lcov.info | codacy-coverage",
