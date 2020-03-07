@@ -88,9 +88,14 @@ registerPredicate("Undefined", (value) => value === undefined);
 
 registerPredicate("Null", (value) => value === null);
 
-["Boolean", "Function", "String", "Symbol", "BigInt"].map((name) => {
-    registerPredicate(name, `typeof v==='${name.toLowerCase()}'`);
-});
+const defineNativeType= (name)=> registerPredicate(name, `typeof v==='${name.toLowerCase()}'`);
+
+["Boolean", "Function", "String", "Symbol"].map(defineNativeType);
+
+try{
+    new Function('', 'return 1n')();
+    defineNativeType("BigInt");
+}catch(e){}
 
 registerPredicate("NaN", (thing) => thing !== thing);
 
