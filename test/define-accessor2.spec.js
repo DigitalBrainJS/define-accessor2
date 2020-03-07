@@ -1,5 +1,5 @@
 const lib =require('../src/define-accessor2');
-const {defineAccessor, defineValidator}= lib;
+const {defineAccessor, defineValidator, flushAccessor}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
 const chai=require('chai');
 const Joi = require('@hapi/joi');
@@ -78,6 +78,19 @@ describe('defineProperty', function () {
                 writable: false
             });
         }).to.throw(Error, /validate can be used for writable property only/);
+    });
+
+    it("should call the setter when assigning a value", function () {
+        const obj = {};
+        let counter = 0;
+        defineAccessor(obj, 'x', {
+            set() {
+                counter++;
+            }
+        });
+        obj.x=1;
+        obj.x=2;
+        expect(counter).to.equal(2);
     });
 
     it("should create new public prop with string key", function () {
@@ -206,6 +219,31 @@ describe('defineProperty', function () {
 
             expect(counter).to.equal(1)
         });
+
+        it("should flushed when relative accessor changed", function () {
+            const obj = {};
+            let counter= 0;
+
+            defineAccessor(obj, {
+                x: {
+                    get(){
+                        counter++;
+                    },
+                    cached: true
+                },
+                y: {
+                    touches: "x"
+                }
+            });
+
+            +obj.x;
+            +obj.x;
+
+            expect(counter).to.equal(1);
+            obj.y= 1;
+            +obj.x;
+            expect(counter).to.equal(2);
+        });
     });
 
     describe("with chains option", function () {
@@ -317,6 +355,14 @@ describe('defineProperty', function () {
 });
 
 describe("defineValidator", function () {
+    it("should throw if name is not string a-z, A-Z, 0-9", function () {
+        expect(()=> defineValidator('!custom', (value) => value === 'test')).to.throw('validator name');
+    });
+
+    it("should throw if predicate is not a function", function () {
+        expect(()=> defineValidator('custom', 1)).to.throw('validator must be a function');
+    });
+
     it("should define a custom validator", function () {
         const obj = {};
 

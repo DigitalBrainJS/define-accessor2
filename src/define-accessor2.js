@@ -25,16 +25,6 @@ const validatePropKey = (prop) => {
     return type;
 };
 
-const touch = (obj, touches) => {
-    touches.forEach(prop => {
-        const props = obj[symbolProps],
-            symbolCache = props && props[prop];
-        if (symbolCache) {
-            obj[symbolCache] = UNDEFINED_VALUE;
-        }
-    });
-};
-
 
 class ValidationError extends Error {
 }
@@ -57,6 +47,10 @@ function prepareAccessor(obj, prop, descriptor) {
     }
 
     let {
+        touches
+    } = descriptor;
+
+    let {
         /**
          * @type ?Function
          * @private
@@ -72,16 +66,13 @@ function prepareAccessor(obj, prop, descriptor) {
         enumerable,
         type,
         validate,
-        writable = !!(set || validate || type),
+        writable = !!(set || validate || type || touches),
         chains,
         virtual,
         lazy,
         value
     } = descriptor;
 
-    let {
-        touches
-    } = descriptor;
 
     if (cached && !get) {
         throw Error(`getter is required for cached mode`);
@@ -103,10 +94,6 @@ function prepareAccessor(obj, prop, descriptor) {
 
     const propName = isSymbolProp ? prop.toString().slice(7, -1) : prop;
 
-    if (value !== undefined && !writable && !symbol) {
-        throw Error(`Unable to set init value for read-only virtual accessor ${propName}`);
-    }
-
     if (touches) {
         let type;
         if ((type = typeof touches) !== 'Symbol') {
@@ -123,6 +110,10 @@ function prepareAccessor(obj, prop, descriptor) {
                 throw Error(`prop [${propName}] touches itself`);
             }
         }
+    }
+
+    if (value !== undefined && !writable && !symbol) {
+        throw Error(`Unable to set init value for read-only virtual accessor ${propName}`);
     }
 
     if (lazy) {
@@ -248,6 +239,8 @@ function prepareAccessor(obj, prop, descriptor) {
         }
     })();
 
+    const context= this;
+
     const setter = set ? function (value) {
 
         checkType && checkType(value);
@@ -272,7 +265,7 @@ function prepareAccessor(obj, prop, descriptor) {
                     if (cached) {
                         this[symbolCache] = UNDEFINED_VALUE;
                     }
-                    touches && touch(this, touches);
+                    touches && context.flushAccessor(this, ...touches);
                 }
             } else {
                 if (cachedFlag !== undefined) {
@@ -290,7 +283,7 @@ function prepareAccessor(obj, prop, descriptor) {
                     this[symbolCache] = UNDEFINED_VALUE;
                 }
                 this[symbol] = newValue;
-                touches && touch(this, touches);
+                touches && context.flushAccessor(this, ...touches);
             }
         }
     } : (writable ? function (newValue) {
@@ -307,7 +300,7 @@ function prepareAccessor(obj, prop, descriptor) {
             if (cached) {
                 this[symbolCache] = UNDEFINED_VALUE;
             }
-            touches && touch(this, touches);
+            touches && context.flushAccessor(this, ...touches);
         }
         this[symbol] = newValue;
     } : function () {
@@ -543,7 +536,7 @@ class Context{
     /**
      * flush accessor's cache
      * @param obj {Object} target object
-     * @param prop {PropertyKey} public accessor's key
+     * @param props {...PropertyKey} public accessor's key
      * @returns {boolean} true if flushed successfully
      * @alias module:define-accessor2#flushAccessor
      * @example
@@ -555,16 +548,21 @@ class Context{
      * flushAccessor(obj, 'hash')
      */
 
-    flushAccessor(obj, prop) {
+    flushAccessor(obj, ...props) {
         const propsMap = obj && obj[symbolProps];
-        let cacheKey;
 
-        if (propsMap && (cacheKey = propsMap[prop])) {
-            obj[cacheKey] = UNDEFINED_VALUE;
-            return true;
+        if(propsMap){
+            let i= props.length;
+            while(i-->0){
+                const cacheKey = propsMap[props[i]];
+                if(cacheKey){
+                    obj[cacheKey] = UNDEFINED_VALUE;
+                }else{
+                    return false;
+                }
+            }
         }
-
-        return false;
+        return true;
     }
 
     /**
@@ -659,30 +657,6 @@ Object.defineProperties(Context.prototype, Object.entries(types).reduce((descrip
     return descriptors;
 }, {}));
 
-
-
-
-/*
-- Undefined
-- Null
-- Boolean
-- Number
-- String
-- Function
-- Object
-- Symbol
-- BigInt
-- Array
-- Infinity
-- NaN
-- Integer
-- Date
-- Promise
-- RegExp
-- Error
-- Set
-- Map
-*/
 
 /**
  * The default library context. Call context.newContext() to

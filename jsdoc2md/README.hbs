@@ -78,9 +78,6 @@ Custom validator:
     defineAccessor(model, 'id', {
         validate: 'mongoId'
     });
-
-    model.age= 30; //ok, now age= 30
-    model.age= 150; //ValidationError: value (150) is not valid for property (age). Reason: "value" must be less than or equal to 100
 ````
 ````javascript
 const {defineAccessor, flushAccessor}= require('define-accessor2');
