@@ -1,4 +1,5 @@
-const {defineAccessor, defineValidator} =require('../src/define-accessor2');
+const lib =require('../src/define-accessor2');
+const {defineAccessor, defineValidator}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
 const chai=require('chai');
 const Joi = require('@hapi/joi');
@@ -353,7 +354,6 @@ describe("type system", function () {
         "Infinity": [Infinity],
         "String": [""],
         "Function": [()=>{}, function(){}, async ()=>{}, function *(){}],
-        "BigInt": [1n],
         "Symbol": [Symbol()],
         "Null": [null],
         "Object": [{}],
@@ -365,6 +365,10 @@ describe("type system", function () {
         "Error": [new Error()],
         "Promise": [Promise.resolve()],
     };
+
+    if (lib.TYPE_BIGINT) {
+        fixture["BigInt"] = new Function('', 'return [1n]')();
+    }
 
     const makeTest= (type, positiveValues, negativeValues)=>{
         describe(`${type} predicate`, function () {
