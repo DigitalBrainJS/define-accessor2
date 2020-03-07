@@ -5,4 +5,4 @@ node_js:
 env:
   - NODE_ENV=TEST
 script:
-  - npm run build && npm test
+  - npm test
