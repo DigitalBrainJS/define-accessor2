@@ -457,7 +457,7 @@ class Context{
      * @param {Object} obj target object
      * @param {Object.<PropertyKey>} props  properties hash map
      * @param {!Object} [options]
-     * @param {String} [options.prefix] add prefix for each property key of the returning object
+     * @param {String} [options.prefix] add prefix for each property key of the returned object
      * @returns {Object.<PrivatePropKey>} object of private properties that refer to the defined accessors
      * @alias module:define-accessor2#defineAccessor
      * @example

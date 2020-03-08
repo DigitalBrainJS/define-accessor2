@@ -66,7 +66,7 @@ Validate with Joi:
 ````
 Custom validator:
 ````javascript
-     //import library and create new context for local validator definition
+     //import library and create new context for a local validator definition
      const {defineAccessor, defineValidator}= require('define-accessor2').newContext();
      const validator= require('validator');
      const model= {};
@@ -95,12 +95,12 @@ const {_name}= defineAccessor(obj, {
         cached: true
     },
     name: {
-        validate(value, {reject}){
+        validate(value, {reject, set}){
             typeof value!=='string' && reject('must be a string');
             value= value.trim();
             !/^[a-zA-Z]+$/.test(value) && reject('only a-zA-Z allowed');
             value.length<=3 && reject('length should be greater than 3');
-            return value;
+            set(value);
         },
         set: normalize,
         touches: ['hash'],
@@ -152,6 +152,11 @@ Special type:
 - Any (TYPE_ANY)
 
 There are predicates for each type named like isUndefined(value), isNumber(value) etc.
+
+You can combine these types:
+type: 'string|number'
+or
+type: TYPE_STRING|TYPE_NUMBER
 
 ## Contribution
 Feel free to fork, open issues, enhance or create pull requests.

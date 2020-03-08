@@ -66,7 +66,7 @@ Validate with Joi:
 ````
 Custom validator:
 ````javascript
-     //import library and create new context for local validator definition
+     //import library and create new context for a local validator definition
      const {defineAccessor, defineValidator}= require('define-accessor2').newContext();
      const validator= require('validator');
      const model= {};
@@ -78,9 +78,6 @@ Custom validator:
     defineAccessor(model, 'id', {
         validate: 'mongoId'
     });
-
-    model.age= 30; //ok, now age= 30
-    model.age= 150; //ValidationError: value (150) is not valid for property (age). Reason: "value" must be less than or equal to 100
 ````
 ````javascript
 const {defineAccessor, flushAccessor}= require('define-accessor2');
@@ -98,12 +95,12 @@ const {_name}= defineAccessor(obj, {
         cached: true
     },
     name: {
-        validate(value, {reject}){
+        validate(value, {reject, set}){
             typeof value!=='string' && reject('must be a string');
             value= value.trim();
             !/^[a-zA-Z]+$/.test(value) && reject('only a-zA-Z allowed');
             value.length<=3 && reject('length should be greater than 3');
-            return value;
+            set(value);
         },
         set: normalize,
         touches: ['hash'],
@@ -133,7 +130,7 @@ const {_name}= defineAccessor(obj, {
             * [.defineAccessor(obj, prop, [descriptor])](#module_define-accessor2--module.exports+defineAccessor) ⇒ <code>PrivatePropKey</code>
             * [.defineAccessor(obj, props, [descriptor])](#module_define-accessor2--module.exports+defineAccessor) ⇒ <code>Array.&lt;PrivatePropKey&gt;</code>
             * [.defineAccessor(obj, props, [options])](#module_define-accessor2--module.exports+defineAccessor) ⇒ <code>Object.&lt;PrivatePropKey&gt;</code>
-            * [.flushAccessor(obj, prop)](#module_define-accessor2--module.exports+flushAccessor) ⇒ <code>boolean</code>
+            * [.flushAccessor(obj, ...props)](#module_define-accessor2--module.exports+flushAccessor) ⇒ <code>boolean</code>
             * [.defineValidator(name, fn)](#module_define-accessor2--module.exports+defineValidator) ⇒ <code>this</code>
             * [.defineValidator(validators)](#module_define-accessor2--module.exports+defineValidator)
             * [.newContext()](#module_define-accessor2--module.exports+newContext) ⇒ <code>Context</code>
@@ -205,7 +202,7 @@ Defines several accessors using hash map
 | obj | <code>Object</code> | target object |
 | props | <code>Object.&lt;PropertyKey&gt;</code> | properties hash map |
 | [options] | <code>Object</code> |  |
-| [options.prefix] | <code>String</code> | add prefix for each property key of the returning object |
+| [options.prefix] | <code>String</code> | add prefix for each property key of the returned object |
 
 **Example**  
 ```js
@@ -213,7 +210,7 @@ const {_name, _surname}= defineAccessor(obj, {    name: {        get(){      
 ```
 <a name="module_define-accessor2--module.exports+flushAccessor"></a>
 
-#### module.exports.flushAccessor(obj, prop) ⇒ <code>boolean</code>
+#### module.exports.flushAccessor(obj, ...props) ⇒ <code>boolean</code>
 flush accessor's cache
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
@@ -222,7 +219,7 @@ flush accessor's cache
 | Param | Type | Description |
 | --- | --- | --- |
 | obj | <code>Object</code> | target object |
-| prop | <code>PropertyKey</code> | public accessor's key |
+| ...props | <code>PropertyKey</code> | public accessor's key |
 
 **Example**  
 ```js
@@ -407,10 +404,16 @@ For example, null is not an object, NaN is not a number, and so on.
 
 An exception is the integer pseudotype which is an integer and a number types.
 - Integer (TYPE_INTEGER)
+
 Special type:
 - Any (TYPE_ANY)
 
 There are predicates for each type named like isUndefined(value), isNumber(value) etc.
+
+You can combine these types:
+type: 'string|number'
+or
+type: TYPE_STRING|TYPE_NUMBER
 
 ## Contribution
 Feel free to fork, open issues, enhance or create pull requests.
