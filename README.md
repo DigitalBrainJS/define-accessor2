@@ -5,9 +5,10 @@
 [![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
 [![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
 
-:star: An extended version of Object.defineProperty function. Define feature-rich properties for your objects :star:
+:star: Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty function :star:
 
 # Features
+- no dependencies
 - supports decorators for methods and class properties
 - legacy and current draft of decorator interface supported at runtime
 - lazy properties
@@ -17,8 +18,9 @@
 - built-in basic type system (see [Built-in types](#built-in-types))
 - automatically flushes getter cache after changing related properties
 - defining custom validators
-- creating isolated contexts to define validators in a local scope
+- isolated contexts to define validators in a local scope
 - chaining methods - can create chaining methods like get**PropName** and set**PropName**
+- type predicates (isNumber, isNull etc)
 
 ## Installation
 
@@ -105,11 +107,11 @@ Just using plain functions without any decorators
 
      defineAccessor(obj, 'someProp', {
          type: 'string|number'
-      });
-      //or using type bit mask
-      defineAccessor(obj, 'someProp', {
+     });
+     //or using type bit mask
+     defineAccessor(obj, 'someProp', {
          type: TYPE_STRING|TYPE_NUMBER
-      });
+     });
 ````
 Validate with Joi:
 ````javascript
