@@ -18,7 +18,7 @@
     "test:only": "npm run babel && npm run babel-legacy && mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
     "babel": "babel  --config-file ./.babelrc ./test/decorators.spec.js --out-file ./test/decorators.build.spec.js",
-    "babel-legacy": "babel --config-file ./test/.babelrc-legacy ./test/decorators.spec.js --out-file ./test/decorators.legacy.build.spec.js"
+    "babel-legacy": "babel --config-file ./.babelrc-legacy ./test/decorators.spec.js --out-file ./test/decorators.legacy.build.spec.js"
   },
   "repository": "https://github.com/DigitalBrainJS/define-accessor2.git",
   "bugs": {
