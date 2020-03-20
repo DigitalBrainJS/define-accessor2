@@ -939,6 +939,14 @@ class Context{
      * @alias module:define-accessor2#array
      */
 
+    /**
+     * Integer decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#integer
+     */
+
+    integer(){}
+
     array(){}
 
     /**

@@ -10,7 +10,7 @@
 # Features
 - no dependencies
 - supports decorators for methods and class properties
-- legacy and current draft of decorator interface supported at runtime
+- supports legacy and current draft of decorator specification
 - lazy properties
 - cached properties - cache the value returned by the accessor getter. Cached value can be flushed later
 - validation hook
@@ -227,6 +227,7 @@ const {_name}= defineAccessor(obj, {
             * [.error()](#module_define-accessor2--module.exports+error) ⇒ <code>MethodDecorator</code>
             * [.set()](#module_define-accessor2--module.exports+set) ⇒ <code>MethodDecorator</code>
             * [.map()](#module_define-accessor2--module.exports+map) ⇒ <code>MethodDecorator</code>
+            * [.integer()](#module_define-accessor2--module.exports+integer) ⇒ <code>MethodDecorator</code>
         * _inner_
             * [~Context](#module_define-accessor2--module.exports..Context)
             * [~SetterFunction](#module_define-accessor2--module.exports..SetterFunction) ⇒ <code>any</code>
@@ -560,6 +561,12 @@ Set decorator
 
 #### module.exports.map() ⇒ <code>MethodDecorator</code>
 Map decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+integer"></a>
+
+#### module.exports.integer() ⇒ <code>MethodDecorator</code>
+Integer decorator
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 <a name="module_define-accessor2--module.exports..Context"></a>
