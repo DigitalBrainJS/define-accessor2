@@ -13,7 +13,9 @@ const {resolvePredicate, decodeType, tagOf}= types;
 const {defineProperty, defineProperties} = Object;
 const {hasOwnProperty, toString} = Object.prototype;
 const UNDEFINED_VALUE = Symbol();
-const symbolProps = Symbol('@@PROPS');
+const CHANGED_VALUE = Symbol();
+const symbolCachedPropKeys = Symbol('@@cachedPropKeys');
+const symbolPrivatePropKeys = Symbol('@@privatePropKeys');
 const _validators = Symbol('validators');
 
 const isPlainObject = (obj) => !!obj && toString.call(obj) === '[object Object]';
@@ -25,12 +27,36 @@ const validatePropKey = (prop) => {
     return type;
 };
 
+const resolveTouches = (prop, touches) => {
+    const resolved = (() => {
+        switch (typeof touches) {
+            case 'string':
+                return touches.split(/\s+/);
+            case 'symbol':
+                return [touches];
+            case 'object':
+                if (Array.isArray(touches)) {
+                    return touches;
+                }
+        }
+        throw TypeError(`Invalid touches for ${prop} property`);
+    })();
+
+    resolved.forEach((_prop) => {
+        validatePropKey(_prop);
+        if (_prop === prop) {
+            throw Error(`prop [${prop}] touches itself`);
+        }
+    });
+
+    return resolved;
+};
 
 class ValidationError extends Error {
 }
 
 
-function prepareAccessor(obj, prop, descriptor) {
+function prepareDescriptor(prop, descriptor) {
     const propType = validatePropKey(prop);
 
     const isSymbolProp = propType === 'symbol';
@@ -73,6 +99,7 @@ function prepareAccessor(obj, prop, descriptor) {
         value
     } = descriptor;
 
+    const context= this;
 
     if (cached && !get) {
         throw Error(`getter is required for cached mode`);
@@ -95,26 +122,64 @@ function prepareAccessor(obj, prop, descriptor) {
     const propName = isSymbolProp ? prop.toString().slice(7, -1) : prop;
 
     if (touches) {
-        let type;
-        if ((type = typeof touches) !== 'Symbol') {
-            if (Array.isArray(touches)) {
-                touches.forEach(validatePropKey);
-            } else if (type === 'string') {
-                touches = touches.split(/\s+/);
-                touches.forEach(validatePropKey);
-            } else {
-                throw TypeError(`touch option should be a string or array`)
-            }
-
-            if (touches.some((destProp) => prop === destProp)) {
-                throw Error(`prop [${propName}] touches itself`);
-            }
-        }
+        touches= resolveTouches(propName, touches);
     }
+
+    const symbol = virtual ? null : Symbol(`@@${propName}`);
+    const symbolCache = cached ? Symbol(`@@${propName}_CACHED`) : null;
 
     if (value !== undefined && !writable && !symbol) {
         throw Error(`Unable to set init value for read-only virtual accessor ${propName}`);
     }
+
+    const initTarget= (obj)=>{
+        if(cached) {
+            const cachedKeyStore = hasOwnProperty.call(obj, symbolCachedPropKeys) ?
+                obj[symbolCachedPropKeys] : (obj[symbolCachedPropKeys] = Object.create(null));
+            cachedKeyStore[prop] = symbolCache;
+        }
+
+        if(symbol){
+            const privateKeyStore = hasOwnProperty.call(obj, symbolPrivatePropKeys) ?
+                obj[symbolPrivatePropKeys] : (obj[symbolPrivatePropKeys] = Object.create(null));
+            privateKeyStore[prop] = symbol;
+        }
+
+        if (chains) {
+            if (!propName) {
+                throw Error(`can't create named chain for anonymous symbol property`);
+            }
+            let chainName = typeof chains === 'string' ?
+                chains.trim() : propName.replace(/[^A-Za-z][^-A-Za-z0-9_]*/, '');
+
+            if (!chainName) {
+                throw Error(`can't generate chain name for [${prop}] prop`);
+            }
+            chainName = chainName[0].toUpperCase() + chainName.slice(1);
+
+            defineProperty(obj, 'get' + chainName, {
+                configurable,
+                enumerable,
+                value: getter
+            });
+            const setterName = 'set' + chainName;
+            defineProperty(obj, setterName, {
+                configurable,
+                enumerable,
+                value: function (value) {
+                    const {length} = arguments;
+                    if (length === 1) {
+                        setter.call(this, value);
+                    } else {
+                        throw Error(length ?
+                            `too much arguments [${length}] were passed to [${setterName}] accessor` :
+                            `accessor [${setterName}] requires a value`);
+                    }
+                    return this;
+                }
+            })
+        }
+    };
 
     if (lazy) {
         if (!get) {
@@ -130,22 +195,17 @@ function prepareAccessor(obj, prop, descriptor) {
         };
 
         return {
-            descriptor: {
-                get: function () {
-                    const value = get.call(this, prop);
-                    redefine.call(this, value);
-                    return value;
-                },
-                set: redefine,
-                configurable: true,
-                enumerable
-            }
+            get: function () {
+                const value = get.call(this, prop);
+                redefine.call(this, value);
+                return value;
+            },
+            set: redefine,
+            configurable: true,
+            enumerable,
+            initTarget
         };
     }
-
-    const propsMap = cached ? hasOwnProperty.call(obj) ? obj[symbolProps] : (obj[symbolProps] = Object.create(obj[symbolProps] || null)) : null;
-    const symbol = virtual ? null : Symbol(`@@${propName}`);
-    const symbolCache = cached ? Symbol(`@@${propName}_CACHED`) : null;
 
     if (!get && virtual) {
         throw Error(`missing getter for virtual prop [${propName}]`);
@@ -239,8 +299,6 @@ function prepareAccessor(obj, prop, descriptor) {
         }
     })();
 
-    const context= this;
-
     const setter = set ? function (value) {
 
         checkType && checkType(value);
@@ -275,15 +333,17 @@ function prepareAccessor(obj, prop, descriptor) {
 
         } else {
             const currentValue = this[symbol];
-            const newValue = set.call(this, value, currentValue, prop);
+            const newValue = set.call(this, value, currentValue, prop, symbol);
 
-            if (newValue !== currentValue) {
+            if (newValue !== currentValue || currentValue!==this[symbol] || newValue === CHANGED_VALUE) {
 
                 if (cached) {
                     this[symbolCache] = UNDEFINED_VALUE;
                 }
                 this[symbol] = newValue;
                 touches && context.flushAccessor(this, ...touches);
+
+                return CHANGED_VALUE;
             }
         }
     } : (writable ? function (newValue) {
@@ -301,46 +361,16 @@ function prepareAccessor(obj, prop, descriptor) {
                 this[symbolCache] = UNDEFINED_VALUE;
             }
             touches && context.flushAccessor(this, ...touches);
+
+            this[symbol] = newValue;
+
+            return CHANGED_VALUE;
         }
-        this[symbol] = newValue;
+
     } : function () {
         throw Error(`unable to rewrite read-only property [${prop}] of ${this}`)
     });
 
-    if (chains) {
-        if (!propName) {
-            throw Error(`can't create named chain for anonymous symbol property`);
-        }
-        let chainName = typeof chains === 'string' ? chains.trim() : propName.replace(/[^A-Za-z][^-A-Za-z0-9_]*/, '');
-        if (!chainName) {
-            throw Error(`can't generate chain name for [${prop}] prop`);
-        }
-        chainName = chainName[0].toUpperCase() + chainName.slice(1);
-        defineProperty(obj, 'get' + chainName, {
-            configurable,
-            enumerable,
-            value: getter
-        });
-        const setterName = 'set' + chainName;
-        defineProperty(obj, setterName, {
-            configurable,
-            enumerable,
-            value: function (value) {
-                const {length} = arguments;
-                if (length === 1) {
-                    setter.call(this, value);
-                } else {
-                    throw Error(length ?
-                        `too much arguments [${length}] were passed to [${setterName}] accessor` :
-                        `accessor [${setterName}] requires a value`);
-                }
-                return this;
-            }
-        })
-    }
-    if (propsMap) {
-        propsMap[prop] = symbolCache;
-    }
     return {
         symbol,
         symbolCache,
@@ -349,17 +379,79 @@ function prepareAccessor(obj, prop, descriptor) {
         set: setter,
         configurable,
         enumerable,
-        initValue: value
+        initValue: value,
+        initTarget
+    }
+}
+
+function reduceDecorator(decorator){
+    return function (arg0, arg1, arg2){
+        if(arguments.length===1){
+            return decorator(arg0);
+        }else{
+            const {descriptor, finisher}= decorator.call(this, {
+                key: arg1,
+                placement: typeof arg0==='function'? 'static' : 'prototype',
+                descriptor: arg2
+            });
+            finisher(arg0.constructor);
+            return descriptor;
+        }
     }
 }
 
 
+function buildDecorator(arg0, name) {
+    const decorator = function (params) {
+        return reduceDecorator((decoratorDescriptor)=>{
+            const {key, kind, placement, descriptor, initializer} = decoratorDescriptor;
+
+            if (kind !== 'field' && kind !== 'method') {
+                throw Error(`${name} decorator can be used for public method or field`);
+            }
+
+            const {get, set, enumerable, configurable, initTarget, initValue, symbol} = prepareDescriptor.call(this, key, {
+                get: descriptor.get,
+                set: descriptor.set,
+                value: initializer ? initializer() : undefined,
+                enumerable: descriptor.enumerable,
+                configurable: descriptor.configurable,
+                ...params
+            });
+
+            return {
+                kind: 'method',
+                key,
+                placement,
+                descriptor: {
+                    get,
+                    set,
+                    configurable,
+                    enumerable
+                },
+                finisher: (target) => {
+                    const _target = placement !== 'static' ? target.prototype : target;
+                    initTarget(_target);
+                    if (initValue !== undefined) {
+                        _target[symbol] = initValue;
+                    }
+                    return target;
+                }
+            }
+        });
+    };
+
+    return typeof arg0==='function'? function(params){
+        return decorator.call(this, arg0(params));
+    } : decorator(arg0);
+}
 
 /**
  * @typedef {Function} SetterFunction
  * @param {any} newValue new value to set
  * @param {any} currentValue current private value
  * @param {PropertyKey} propKey public property key
+ * @param {PrivatePropKey} privateKey private property key
  * @returns {any} value to store in the private property
  */
 
@@ -405,20 +497,39 @@ function prepareAccessor(obj, prop, descriptor) {
  */
 
 /**
+ * @private
+ * @param {Object} context
+ * @param {Array} props
+ * @param {Function} fn factory
+ */
+
+function redefine(context, props, fn) {
+    Object.defineProperties(context,
+        props.reduce((descriptor, name) => {
+            descriptor[name] = {
+                value: fn.call(context, context[name], name)
+            };
+            return descriptor;
+        }, {}))
+}
+
+
+
+/**
  * Library context class
  */
 
 class Context{
     constructor(parentContext= null){
         this[_validators]= Object.create(parentContext);
-
-        Object.defineProperties(this, ['defineAccessor', 'flushAccessor', 'defineValidator']
-            .reduce((descriptor, name) => {
-                descriptor[name]= {
-                    value: this[name].bind(this)
-                };
-                return descriptor;
-            }, {}))
+        redefine(this, protoMethods, (fn) => fn.bind(this));
+        Object.entries(types.list).forEach(([type, mask])=>{
+            Object.defineProperty(this[type], 'valueOf', {
+                value: function(){
+                    return mask
+                }
+            })
+        });
     }
 
     /**
@@ -482,8 +593,9 @@ class Context{
          const descriptors = {};
 
          const buildDescriptor = (prop, options = {}) => {
-             const descriptor= prepareAccessor.call(this, obj, prop, options);
+             const descriptor= prepareDescriptor.call(this, prop, options);
              descriptors[prop] = descriptor;
+             descriptor.initTarget(obj);
              return descriptor.symbol;
          };
 
@@ -549,7 +661,7 @@ class Context{
      */
 
     flushAccessor(obj, ...props) {
-        const propsMap = obj && obj[symbolProps];
+        const propsMap = obj && obj[symbolCachedPropKeys];
 
         if(propsMap){
             let i= props.length;
@@ -563,6 +675,18 @@ class Context{
             }
         }
         return true;
+    }
+
+    /**
+     * retrieve the private accessor symbol assigned to the accessor
+     * @param {Object} obj
+     * @param {PropertyKey} prop
+     * @returns {Symbol|null}
+     * @alias module:define-accessor2#privateSymbol
+     */
+
+    privateSymbol(obj, prop){
+        return obj[symbolPrivatePropKeys][prop] || null;
     }
 
     /**
@@ -606,7 +730,11 @@ class Context{
         };
 
         if (arguments.length === 1) {
-            Object.entries(arg0).forEach(([name, fn]) => define(name, fn));
+            Object.entries(arg0).forEach(([name, fn]) => {
+                if(typeof fn==='function') {
+                    define(name, fn)
+                }
+            });
         } else {
             define(arg0, arg1);
         }
@@ -625,7 +753,8 @@ class Context{
 
     /**
      * resolve predicate for type
-     * @function resolvePredicate
+     * @name Context#resolvePredicate
+     * @type {Function}
      * @param {BasicType} type
      * @returns {AssertionFunction} assertion function
      * @alias module:define-accessor2#resolvePredicate
@@ -636,7 +765,7 @@ class Context{
      * @alias module:define-accessor2#newContext
      * @returns {Context}
      * @example
-     * const {defineAccessor, flushAccessor}= require('define-accessor2').newContext()
+     * const {defineAccessor, flushAccessor, defineValidator}= require('define-accessor2').newContext()
      * //define custom validators for the current and inherited from the current contexts only
      * defineValidator({
      *     even: (value)=> typeof value && value % 2===0,
@@ -648,19 +777,290 @@ class Context{
         return new Context(this);
     }
 
+    /**
+     * accessor decorator
+     * @param accessorDescriptor
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#accessor
+     * @example
+     * class Person{
+     *     @accessor({
+     *         set: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+     *     })
+     *     fullName='';
+     *
+     *     firstName= 'John';
+     *     lastName= 'John Doe';
+     * }
+     *//**
+     * @param {Function} [get] - getter function, can be omitted
+     * @param {Function} [set] - setter function, can be omitted
+     * @param {AccessorDescriptor} [accessorDescriptor] - accessor descriptor
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#accessor
+     * @example
+     * class Person{
+     *     @accessor(null, (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())
+     *     fullName='';
+     *
+     *     firstName= 'John';
+     *     lastName= 'John Doe';
+     * }
+     */
+
+    accessor(accessorDescriptor){}
+
+    /**
+     * lazy decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#lazy
+     */
+
+    lazy(){}
+
+    /**
+     * cached decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#cached
+     */
+
+    cached(){}
+
+    /**
+     * cached decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#chains
+     */
+
+    chains(){}
+
+    /**
+     * type decorator
+     * @param {BasicType} type
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#type
+     */
+
+    type(type){}
+
+    /**
+     * validate decorator
+     * @param {BasicType} validator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#validate
+     */
+
+    validate(validator){}
+
+    /**
+     * touches decorator
+     * @param {PropertyKey|PropertyKey[]} props
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#touches
+     */
+
+    touches(props){}
+
+    /**
+     * Undefined decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#undefined
+     */
+
+    undefined(){}
+
+    /**
+     * Null decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#null
+     */
+
+    null(){}
+
+    /**
+     * Boolean decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#boolean
+     */
+
+    boolean(){}
+
+    /**
+     * Number decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#number
+     */
+
+    number(){}
+
+    /**
+     * string decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#string
+     */
+
+    string(){}
+
+    /**
+     * Function decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#function
+     */
+
+    function(){}
+
+    /**
+     * Object decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#object
+     */
+
+    object(){}
+
+    /**
+     * Symbol decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#symbol
+     */
+
+    symbol(){}
+
+    /**
+     * BigInt decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#bigint
+     */
+
+    bigint(){}
+
+    /**
+     * Array decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#array
+     */
+
+    array(){}
+
+    /**
+     * Infinity decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#infinity
+     */
+
+    infinity(){}
+
+    /**
+     * NaN decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#nan
+     */
+
+    nan(){}
+
+    /**
+     * Date decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#date
+     */
+
+    date(){}
+
+    /**
+     * Promise decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#promise
+     */
+
+    promise(){}
+
+    /**
+     * RegExp decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#regexp
+     */
+
+    regexp(){}
+
+    /**
+     * Error decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#error
+     */
+
+    error(){}
+
+    /**
+     * Set decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#set
+     */
+
+    set(){}
+
+    /**
+     * Map decorator
+     * @returns {MethodDecorator}
+     * @alias module:define-accessor2#map
+     */
+
+    map(){}
 }
 
-Object.defineProperties(Context.prototype, Object.entries(types).reduce((descriptors, [prop, value]) => {
+const {prototype}= Context;
+
+const decorators= {
+    lazy: {lazy: true},
+    cached: {cached: true},
+    chains: {chains: true},
+    type: (type)=> ({type}),
+    validate: (validate)=> ({validate}),
+    touches: (props)=> ({touches: props}),
+    accessor: (...args)=> {
+        const paramList= ['get', 'set'];
+        const computed= {};
+        const lastIndex= args.length - 1;
+
+        args.forEach((param, i) => {
+            if (typeof param === 'object') {
+                if (i !== lastIndex) {
+                    throw Error(`options object must be the last argument, but found at index ${i}`);
+                }
+                Object.assign(computed, param);
+            } else {
+                if (i > paramList.length - 1) {
+                    throw Error(`Unknown parameter at index ${i}`);
+                }
+                computed[paramList[i]] = param;
+            }
+        });
+        return computed;
+    },
+};
+
+
+Object.keys(types.list).forEach(type=>{
+    decorators[type]= {type}
+});
+
+Object.entries(decorators).forEach(([name, value])=>{
+    Object.defineProperty(prototype, name, {
+        value: buildDecorator(value, name),
+        configurable: true
+    })
+});
+
+Object.defineProperties(prototype, Object.entries(types).reduce((descriptors, [prop, value]) => {
     descriptors[prop] = {
         value
     };
     return descriptors;
 }, {}));
 
+const protoMethods= Object.getOwnPropertyNames(prototype).filter((prop)=> typeof prototype[prop]==='function');
 
 /**
  * The default library context. Call context.newContext() to
- * return a new context inherited from the current context.
+ * return a new context inherited from the current.
  * This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
  */
 

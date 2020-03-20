@@ -8,11 +8,13 @@
 :star: An extended version of Object.defineProperty function. Define feature-rich properties for your objects :star:
 
 # Features
+- supports decorators for methods and class properties
+- legacy and current draft of decorator interface supported at runtime
 - lazy properties
-- cached properties - cache the value returned by the getter. Cached value can be flushed later
-- validation handler
+- cached properties - cache the value returned by the accessor getter. Cached value can be flushed later
+- validation hook
 - Joi validation out of the box
-- built-in basic type system
+- built-in basic type system (see [Built-in types](#built-in-types))
 - automatically flushes getter cache after changing related properties
 - defining custom validators
 - creating isolated contexts to define validators in a local scope
@@ -35,6 +37,68 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
 ````
 
 ## Usage examples
+A basic example of using library decorators (with plugin-proposal-decorators and plugin-proposal-class-properties babel plugins):
+````javascript
+const {string} = require('define-accessor2');
+
+class Cat{
+    @string
+    name= ''
+}
+
+const cat= new Cat();
+cat.name= 'Lucky'; // Ok
+cat.name= 123; // TypeError: Property name accepts String, but number given
+````
+More complex:
+````javascript
+const {type, cached, touches, validate, accessor, defineValidator, string}= require('define-accessor2');
+const hash = require('object-hash');
+const validator= require('validator');
+const Joi= require('@hapi/joi');
+
+//import all methods as validators predicates
+defineValidator(validator);
+
+class Model{
+    // cached value
+    @cached
+    get sha(){
+        console.log('calc sha');
+        return hash(this);
+    }
+    // this prop affects 'sha' prop
+    @touches('sha')
+    @string
+    name= 'anonymous';
+
+    @touches('sha')
+    @type('number|string')
+    foo= 30;
+    // define all accessor props in one decorator (recommended way)
+    @accessor({
+        touches: 'sha',
+        validate: 'isEmail'
+    })
+    email= '';
+    // Joi validator can be used out of the box for complex properties validation
+    @validate(Joi.array().items(Joi.string()))
+    labels= [];
+}
+
+const model= new Model('test');
+
+console.log(model.name); // 'anonymous'
+console.log(model.sha); // calc sha
+console.log(model.sha); // just return the cached value
+model.name= 'admin';
+console.log(model.sha); // calc sha
+model.email= 'admin@google.com';
+console.log(model.sha);
+model.foo= true;
+model.labels= ['123'];
+````
+Just using plain functions without any decorators
 ````javascript
      const {defineAccessor, TYPE_NUMBER, TYPE_STRING}= require('define-accessor2');
      const obj= {};
@@ -42,7 +106,7 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
      defineAccessor(obj, 'someProp', {
          type: 'string|number'
       });
-      //or using bit mask
+      //or using type bit mask
       defineAccessor(obj, 'someProp', {
          type: TYPE_STRING|TYPE_NUMBER
       });
@@ -131,12 +195,38 @@ const {_name}= defineAccessor(obj, {
             * [.defineAccessor(obj, props, [descriptor])](#module_define-accessor2--module.exports+defineAccessor) ⇒ <code>Array.&lt;PrivatePropKey&gt;</code>
             * [.defineAccessor(obj, props, [options])](#module_define-accessor2--module.exports+defineAccessor) ⇒ <code>Object.&lt;PrivatePropKey&gt;</code>
             * [.flushAccessor(obj, ...props)](#module_define-accessor2--module.exports+flushAccessor) ⇒ <code>boolean</code>
+            * [.privateSymbol(obj, prop)](#module_define-accessor2--module.exports+privateSymbol) ⇒ <code>Symbol</code> \| <code>null</code>
             * [.defineValidator(name, fn)](#module_define-accessor2--module.exports+defineValidator) ⇒ <code>this</code>
             * [.defineValidator(validators)](#module_define-accessor2--module.exports+defineValidator)
             * [.newContext()](#module_define-accessor2--module.exports+newContext) ⇒ <code>Context</code>
+            * [.accessor(accessorDescriptor)](#module_define-accessor2--module.exports+accessor) ⇒ <code>MethodDecorator</code>
+            * [.accessor([get], [set], [accessorDescriptor])](#module_define-accessor2--module.exports+accessor) ⇒ <code>MethodDecorator</code>
+            * [.lazy()](#module_define-accessor2--module.exports+lazy) ⇒ <code>MethodDecorator</code>
+            * [.cached()](#module_define-accessor2--module.exports+cached) ⇒ <code>MethodDecorator</code>
+            * [.chains()](#module_define-accessor2--module.exports+chains) ⇒ <code>MethodDecorator</code>
+            * [.type(type)](#module_define-accessor2--module.exports+type) ⇒ <code>MethodDecorator</code>
+            * [.validate(validator)](#module_define-accessor2--module.exports+validate) ⇒ <code>MethodDecorator</code>
+            * [.touches(props)](#module_define-accessor2--module.exports+touches) ⇒ <code>MethodDecorator</code>
+            * [.undefined()](#module_define-accessor2--module.exports+undefined) ⇒ <code>MethodDecorator</code>
+            * [.null()](#module_define-accessor2--module.exports+null) ⇒ <code>MethodDecorator</code>
+            * [.boolean()](#module_define-accessor2--module.exports+boolean) ⇒ <code>MethodDecorator</code>
+            * [.number()](#module_define-accessor2--module.exports+number) ⇒ <code>MethodDecorator</code>
+            * [.string()](#module_define-accessor2--module.exports+string) ⇒ <code>MethodDecorator</code>
+            * [.function()](#module_define-accessor2--module.exports+function) ⇒ <code>MethodDecorator</code>
+            * [.object()](#module_define-accessor2--module.exports+object) ⇒ <code>MethodDecorator</code>
+            * [.symbol()](#module_define-accessor2--module.exports+symbol) ⇒ <code>MethodDecorator</code>
+            * [.bigint()](#module_define-accessor2--module.exports+bigint) ⇒ <code>MethodDecorator</code>
+            * [.array()](#module_define-accessor2--module.exports+array) ⇒ <code>MethodDecorator</code>
+            * [.infinity()](#module_define-accessor2--module.exports+infinity) ⇒ <code>MethodDecorator</code>
+            * [.nan()](#module_define-accessor2--module.exports+nan) ⇒ <code>MethodDecorator</code>
+            * [.date()](#module_define-accessor2--module.exports+date) ⇒ <code>MethodDecorator</code>
+            * [.promise()](#module_define-accessor2--module.exports+promise) ⇒ <code>MethodDecorator</code>
+            * [.regexp()](#module_define-accessor2--module.exports+regexp) ⇒ <code>MethodDecorator</code>
+            * [.error()](#module_define-accessor2--module.exports+error) ⇒ <code>MethodDecorator</code>
+            * [.set()](#module_define-accessor2--module.exports+set) ⇒ <code>MethodDecorator</code>
+            * [.map()](#module_define-accessor2--module.exports+map) ⇒ <code>MethodDecorator</code>
         * _inner_
             * [~Context](#module_define-accessor2--module.exports..Context)
-            * [~resolvePredicate(type)](#module_define-accessor2--module.exports..resolvePredicate) ⇒ <code>AssertionFunction</code>
             * [~SetterFunction](#module_define-accessor2--module.exports..SetterFunction) ⇒ <code>any</code>
             * [~GetterFunction](#module_define-accessor2--module.exports..GetterFunction) ⇒ <code>any</code>
             * [~ValidateFunction](#module_define-accessor2--module.exports..ValidateFunction) ⇒ <code>Boolean</code>
@@ -150,7 +240,7 @@ const {_name}= defineAccessor(obj, {
 <a name="exp_module_define-accessor2--module.exports"></a>
 
 ### module.exports ⏏
-The default library context. Call context.newContext() toreturn a new context inherited from the current context.This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
+The default library context. Call context.newContext() toreturn a new context inherited from the current.This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
 
 **Kind**: Exported member  
 <a name="module_define-accessor2--module.exports+defineAccessor"></a>
@@ -225,6 +315,18 @@ flush accessor's cache
 ```js
 defineAccessor(obj, "hash", {    get(){        return calcObjectSHA(this);    }})flushAccessor(obj, 'hash')
 ```
+<a name="module_define-accessor2--module.exports+privateSymbol"></a>
+
+#### module.exports.privateSymbol(obj, prop) ⇒ <code>Symbol</code> \| <code>null</code>
+retrieve the private accessor symbol assigned to the accessor
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+
+| Param | Type |
+| --- | --- |
+| obj | <code>Object</code> | 
+| prop | <code>PropertyKey</code> | 
+
 <a name="module_define-accessor2--module.exports+defineValidator"></a>
 
 #### module.exports.defineValidator(name, fn) ⇒ <code>this</code>
@@ -265,26 +367,205 @@ creates a new library context
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 **Example**  
 ```js
-const {defineAccessor, flushAccessor}= require('define-accessor2').newContext()//define custom validators for the current and inherited from the current contexts onlydefineValidator({    even: (value)=> typeof value && value % 2===0,    odd: (value)=> typeof value && Math.abs(value % 2)===1,});
+const {defineAccessor, flushAccessor, defineValidator}= require('define-accessor2').newContext()//define custom validators for the current and inherited from the current contexts onlydefineValidator({    even: (value)=> typeof value && value % 2===0,    odd: (value)=> typeof value && Math.abs(value % 2)===1,});
 ```
+<a name="module_define-accessor2--module.exports+accessor"></a>
+
+#### module.exports.accessor(accessorDescriptor) ⇒ <code>MethodDecorator</code>
+accessor decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+**Accessor({**: set: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()    })    fullName='';    firstName= 'John';    lastName= 'John Doe';}  
+
+| Param |
+| --- |
+| accessorDescriptor | 
+
+**Example**  
+```js
+class Person{    
+```
+<a name="module_define-accessor2--module.exports+accessor"></a>
+
+#### module.exports.accessor([get], [set], [accessorDescriptor]) ⇒ <code>MethodDecorator</code>
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+**Accessor(null,**: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())    fullName='';    firstName= 'John';    lastName= 'John Doe';}  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| [get] | <code>function</code> | getter function, can be omitted |
+| [set] | <code>function</code> | setter function, can be omitted |
+| [accessorDescriptor] | <code>AccessorDescriptor</code> | accessor descriptor |
+
+**Example**  
+```js
+class Person{    
+```
+<a name="module_define-accessor2--module.exports+lazy"></a>
+
+#### module.exports.lazy() ⇒ <code>MethodDecorator</code>
+lazy decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+cached"></a>
+
+#### module.exports.cached() ⇒ <code>MethodDecorator</code>
+cached decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+chains"></a>
+
+#### module.exports.chains() ⇒ <code>MethodDecorator</code>
+cached decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+type"></a>
+
+#### module.exports.type(type) ⇒ <code>MethodDecorator</code>
+type decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+
+| Param | Type |
+| --- | --- |
+| type | <code>BasicType</code> | 
+
+<a name="module_define-accessor2--module.exports+validate"></a>
+
+#### module.exports.validate(validator) ⇒ <code>MethodDecorator</code>
+validate decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+
+| Param | Type |
+| --- | --- |
+| validator | <code>BasicType</code> | 
+
+<a name="module_define-accessor2--module.exports+touches"></a>
+
+#### module.exports.touches(props) ⇒ <code>MethodDecorator</code>
+touches decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+
+| Param | Type |
+| --- | --- |
+| props | <code>PropertyKey</code> \| <code>Array.&lt;PropertyKey&gt;</code> | 
+
+<a name="module_define-accessor2--module.exports+undefined"></a>
+
+#### module.exports.undefined() ⇒ <code>MethodDecorator</code>
+Undefined decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+null"></a>
+
+#### module.exports.null() ⇒ <code>MethodDecorator</code>
+Null decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+boolean"></a>
+
+#### module.exports.boolean() ⇒ <code>MethodDecorator</code>
+Boolean decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+number"></a>
+
+#### module.exports.number() ⇒ <code>MethodDecorator</code>
+Number decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+string"></a>
+
+#### module.exports.string() ⇒ <code>MethodDecorator</code>
+string decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+function"></a>
+
+#### module.exports.function() ⇒ <code>MethodDecorator</code>
+Function decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+object"></a>
+
+#### module.exports.object() ⇒ <code>MethodDecorator</code>
+Object decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+symbol"></a>
+
+#### module.exports.symbol() ⇒ <code>MethodDecorator</code>
+Symbol decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+bigint"></a>
+
+#### module.exports.bigint() ⇒ <code>MethodDecorator</code>
+BigInt decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+array"></a>
+
+#### module.exports.array() ⇒ <code>MethodDecorator</code>
+Array decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+infinity"></a>
+
+#### module.exports.infinity() ⇒ <code>MethodDecorator</code>
+Infinity decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+nan"></a>
+
+#### module.exports.nan() ⇒ <code>MethodDecorator</code>
+NaN decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+date"></a>
+
+#### module.exports.date() ⇒ <code>MethodDecorator</code>
+Date decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+promise"></a>
+
+#### module.exports.promise() ⇒ <code>MethodDecorator</code>
+Promise decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+regexp"></a>
+
+#### module.exports.regexp() ⇒ <code>MethodDecorator</code>
+RegExp decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+error"></a>
+
+#### module.exports.error() ⇒ <code>MethodDecorator</code>
+Error decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+set"></a>
+
+#### module.exports.set() ⇒ <code>MethodDecorator</code>
+Set decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
+<a name="module_define-accessor2--module.exports+map"></a>
+
+#### module.exports.map() ⇒ <code>MethodDecorator</code>
+Map decorator
+
+**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 <a name="module_define-accessor2--module.exports..Context"></a>
 
 #### module.exports~Context
 Library context class
 
 **Kind**: inner class of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-<a name="module_define-accessor2--module.exports..resolvePredicate"></a>
-
-#### module.exports~resolvePredicate(type) ⇒ <code>AssertionFunction</code>
-resolve predicate for type
-
-**Kind**: inner method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-**Returns**: <code>AssertionFunction</code> - assertion function  
-
-| Param | Type |
-| --- | --- |
-| type | <code>BasicType</code> | 
-
 <a name="module_define-accessor2--module.exports..SetterFunction"></a>
 
 #### module.exports~SetterFunction ⇒ <code>any</code>
@@ -296,6 +577,7 @@ resolve predicate for type
 | newValue | <code>any</code> | new value to set |
 | currentValue | <code>any</code> | current private value |
 | propKey | <code>PropertyKey</code> | public property key |
+| privateKey | <code>PrivatePropKey</code> | private property key |
 
 <a name="module_define-accessor2--module.exports..GetterFunction"></a>
 
@@ -408,12 +690,27 @@ An exception is the integer pseudotype which is an integer and a number types.
 Special type:
 - Any (TYPE_ANY)
 
-There are predicates for each type named like isUndefined(value), isNumber(value) etc.
+*There are predicates for each type named like isUndefined(value), isNumber(value) etc.*
 
 You can combine these types:
-type: 'string|number'
+type: 'string|number' // strings
 or
-type: TYPE_STRING|TYPE_NUMBER
+type: TYPE_STRING|TYPE_NUMBER //bit mask
+or
+type: string|number // decorators converted to a type bit mask with the valueOf() method
+
+### Decorators
+The library supports both versions of the decorators specification (legacy & current draft).
+There are following decorators:
+- lazy
+- cached
+- touches
+- type
+- validate
+- accessor
+- and decorators for each basic type (string, number, array etc. see [Built-in types](#built-in-types))
+Each decorator has valueOf method that returns a type bit mask, so it's possible to pass decorators as a type:
+@type(number|string)
 
 ## Contribution
 Feel free to fork, open issues, enhance or create pull requests.

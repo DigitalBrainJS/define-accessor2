@@ -10,7 +10,8 @@ const isValidMask = (mask) => !(mask & invalidMask);
 
 const api = {
     TYPE_ANY: -1,
-    isValidMask
+    isValidMask,
+    list: {}
 };
 
 const allocTypeMask = () => {
@@ -66,6 +67,7 @@ const registerPredicate = (type, predicate, options = {}) => {
     cacheType2Mask[typeL] = mask;
     cacheMask2Type[mask] = type;
     cacheMask2TypeL[mask] = typeL;
+    api.list[typeL]= mask;
 
     props["TYPE_" + type.toUpperCase()] = {
         value: mask,
@@ -132,7 +134,7 @@ const {
 const resolvePredicate = (type) => {
     const predicates = [];
 
-    if (typeof type === 'string') {
+    if (typeof type !== 'number') {
         type = resolveType(type);
     }
     if (type === TYPE_ANY) {
@@ -144,7 +146,6 @@ const resolvePredicate = (type) => {
             predicates.push(cacheIndex2Predicate[i]);
         }
     }
-
 
     const count = predicates.length;
 
@@ -162,19 +163,26 @@ const resolvePredicate = (type) => {
 };
 
 const resolveType = (rawType) => {
-    const arr = rawType.split('|');
-    let i = arr.length;
+    const kind= typeof rawType;
     let resolvedType = 0;
-    while (i-- > 0) {
-        const type = arr[i].trim();
-        const mask = cacheType2Mask[type];
-        if (mask === TYPE_ANY) {
-            return TYPE_ANY;
+
+    if(kind==='string') {
+        const arr = rawType.split('|');
+        let i = arr.length;
+        while (i-- > 0) {
+            const type = arr[i].trim();
+            const mask = cacheType2Mask[type];
+            if (mask === TYPE_ANY) {
+                return TYPE_ANY;
+            }
+            if (!mask) {
+                throw Error(`Unknown type ${type}`);
+            }
+            resolvedType |= mask;
         }
-        if (!mask) {
-            throw Error(`Unknown type ${type}`);
-        }
-        resolvedType |= mask;
+    }else if(kind==='object'|| kind==='function'){
+        const value= rawType.valueOf();
+        return Number.isInteger(value) ? value : 0;
     }
     return resolvedType;
 };

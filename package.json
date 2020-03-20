@@ -14,9 +14,11 @@
     "prepublishOnly": "npm test && npm run docs",
     "postversion": "git push && git push --tags",
     "lint": "eslint src",
-    "codacy-coverage": "cat ./coverage/lcov.info | codacy-coverage",
-    "test": "nyc --reporter=html --reporter=text mocha test/ --exit --timeout=3000",
-    "coverage": "nyc report --reporter=text-lcov | coveralls"
+    "test": "npm run babel && npm run babel-legacy && nyc --reporter=html --reporter=text mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
+    "test:only": "npm run babel && npm run babel-legacy && mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "babel": "babel  --config-file ./.babelrc ./test/decorators.spec.js --out-file ./test/decorators.build.spec.js",
+    "babel-legacy": "babel --config-file ./test/.babelrc-legacy ./test/decorators.spec.js --out-file ./test/decorators.legacy.build.spec.js"
   },
   "repository": "https://github.com/DigitalBrainJS/define-accessor2.git",
   "bugs": {
@@ -38,6 +40,7 @@
     "get",
     "set",
     "chains",
+    "decorator",
     "cached",
     "object",
     "private"
@@ -45,6 +48,12 @@
   "author": "Dmitriy Mozgovoy",
   "license": "MIT",
   "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.8.7",
+    "@babel/plugin-proposal-class-properties": "^7.8.3",
+    "@babel/plugin-proposal-decorators": "^7.8.3",
+    "@hapi/joi": "^17.1.0",
+    "babel-core": "^7.0.0-bridge.0",
     "chai": "^4.2.0",
     "coveralls": "^3.0.9",
     "expect": "^23.6.0",
@@ -53,9 +62,7 @@
     "nodemon": "^2.0.2",
     "nyc": "^15.0.0",
     "shx": "^0.3.2",
-    "@hapi/joi": "^17.1.0"
-  },
-  "peerDependencies": {
-    "@hapi/joi": "^17.1.0"
+    "object-hash": "^2.0.3",
+    "validator": "^12.2.0"
   }
 }

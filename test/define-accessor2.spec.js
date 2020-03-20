@@ -1,5 +1,5 @@
 const lib =require('../src/define-accessor2');
-const {defineAccessor, defineValidator, flushAccessor}= lib;
+const {defineAccessor, defineValidator, flushAccessor, privateSymbol, lazy, cached, accessor, type, validate, touches}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
 const chai=require('chai');
 const Joi = require('@hapi/joi');
@@ -354,6 +354,16 @@ describe('defineProperty', function () {
     });
 });
 
+describe("privateSymbol", function () {
+    it(`should retrieve the private accessor symbol assigned to the accessor`, function () {
+        const obj = {};
+
+        const symbol= defineAccessor(obj, 'x');
+
+        expect(privateSymbol(obj, 'x')).to.equal(symbol);
+    });
+});
+
 describe("defineValidator", function () {
     it("should throw if name is not string a-z, A-Z, 0-9", function () {
         expect(()=> defineValidator('!custom', (value) => value === 'test')).to.throw('validator name');
@@ -451,3 +461,16 @@ describe("type system", function () {
     makeTest('integer', [1], [1.1, NaN, Infinity]);
 });
 
+const importTests= (name, tests)=>{
+    describe(name, function () {
+        Object.entries(tests).forEach(([label, test]) => {
+            it(label, test);
+        });
+    });
+};
+
+describe('decorators', function () {
+    importTests('legacy', require('./decorators.legacy.build.spec.js'));
+
+    importTests('current', require('./decorators.build.spec.js'));
+});

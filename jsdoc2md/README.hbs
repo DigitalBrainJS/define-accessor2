@@ -8,11 +8,13 @@
 :star: An extended version of Object.defineProperty function. Define feature-rich properties for your objects :star:
 
 # Features
+- supports decorators for methods and class properties
+- legacy and current draft of decorator interface supported at runtime
 - lazy properties
-- cached properties - cache the value returned by the getter. Cached value can be flushed later
-- validation handler
+- cached properties - cache the value returned by the accessor getter. Cached value can be flushed later
+- validation hook
 - Joi validation out of the box
-- built-in basic type system
+- built-in basic type system (see [Built-in types](#built-in-types))
 - automatically flushes getter cache after changing related properties
 - defining custom validators
 - creating isolated contexts to define validators in a local scope
@@ -35,6 +37,68 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
 ````
 
 ## Usage examples
+A basic example of using library decorators (with plugin-proposal-decorators and plugin-proposal-class-properties babel plugins):
+````javascript
+const {string} = require('define-accessor2');
+
+class Cat{
+    @string
+    name= ''
+}
+
+const cat= new Cat();
+cat.name= 'Lucky'; // Ok
+cat.name= 123; // TypeError: Property name accepts String, but number given
+````
+More complex:
+````javascript
+const {type, cached, touches, validate, accessor, defineValidator, string}= require('define-accessor2');
+const hash = require('object-hash');
+const validator= require('validator');
+const Joi= require('@hapi/joi');
+
+//import all methods as validators predicates
+defineValidator(validator);
+
+class Model{
+    // cached value
+    @cached
+    get sha(){
+        console.log('calc sha');
+        return hash(this);
+    }
+    // this prop affects 'sha' prop
+    @touches('sha')
+    @string
+    name= 'anonymous';
+
+    @touches('sha')
+    @type('number|string')
+    foo= 30;
+    // define all accessor props in one decorator (recommended way)
+    @accessor({
+        touches: 'sha',
+        validate: 'isEmail'
+    })
+    email= '';
+    // Joi validator can be used out of the box for complex properties validation
+    @validate(Joi.array().items(Joi.string()))
+    labels= [];
+}
+
+const model= new Model('test');
+
+console.log(model.name); // 'anonymous'
+console.log(model.sha); // calc sha
+console.log(model.sha); // just return the cached value
+model.name= 'admin';
+console.log(model.sha); // calc sha
+model.email= 'admin@google.com';
+console.log(model.sha);
+model.foo= true;
+model.labels= ['123'];
+````
+Just using plain functions without any decorators
 ````javascript
      const {defineAccessor, TYPE_NUMBER, TYPE_STRING}= require('define-accessor2');
      const obj= {};
@@ -42,7 +106,7 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
      defineAccessor(obj, 'someProp', {
          type: 'string|number'
       });
-      //or using bit mask
+      //or using type bit mask
       defineAccessor(obj, 'someProp', {
          type: TYPE_STRING|TYPE_NUMBER
       });
@@ -151,12 +215,27 @@ An exception is the integer pseudotype which is an integer and a number types.
 Special type:
 - Any (TYPE_ANY)
 
-There are predicates for each type named like isUndefined(value), isNumber(value) etc.
+*There are predicates for each type named like isUndefined(value), isNumber(value) etc.*
 
 You can combine these types:
-type: 'string|number'
+type: 'string|number' // strings
 or
-type: TYPE_STRING|TYPE_NUMBER
+type: TYPE_STRING|TYPE_NUMBER //bit mask
+or
+type: string|number // decorators converted to a type bit mask with the valueOf() method
+
+### Decorators
+The library supports both versions of the decorators specification (legacy & current draft).
+There are following decorators:
+- lazy
+- cached
+- touches
+- type
+- validate
+- accessor
+- and decorators for each basic type (string, number, array etc. see [Built-in types](#built-in-types))
+Each decorator has valueOf method that returns a type bit mask, so it's possible to pass decorators as a type:
+@type(number|string)
 
 ## Contribution
 Feel free to fork, open issues, enhance or create pull requests.
