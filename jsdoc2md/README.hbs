@@ -5,7 +5,7 @@
 [![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
 [![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
 
-:star: Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty function :star:
+:star: Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty :star:
 
 # Features
 - no dependencies
@@ -77,7 +77,7 @@ class Model{
     @touches('sha')
     @type('number|string')
     foo= 30;
-    // define all accessor props in one decorator (recommended way)
+    // configure all the necessary accessor features in one decorator (recommended way)
     @accessor({
         touches: 'sha',
         validate: 'isEmail'
@@ -88,7 +88,7 @@ class Model{
     labels= [];
 }
 
-const model= new Model('test');
+const model= new Model();
 
 console.log(model.name); // 'anonymous'
 console.log(model.sha); // calc sha

@@ -5,7 +5,7 @@
 [![](https://badgen.net/github/issues/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/issues)
 [![](https://badgen.net/github/stars/DigitalBrainJS/define-accessor2)](https://github.com/DigitalBrainJS/define-accessor2/stargazers)
 
-:star: Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty function :star:
+:star: Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty :star:
 
 # Features
 - no dependencies
@@ -77,7 +77,7 @@ class Model{
     @touches('sha')
     @type('number|string')
     foo= 30;
-    // define all accessor props in one decorator (recommended way)
+    // configure all the necessary accessor features in one decorator (recommended way)
     @accessor({
         touches: 'sha',
         validate: 'isEmail'
@@ -88,7 +88,7 @@ class Model{
     labels= [];
 }
 
-const model= new Model('test');
+const model= new Model();
 
 console.log(model.name); // 'anonymous'
 console.log(model.sha); // calc sha
@@ -218,7 +218,7 @@ const {_name}= defineAccessor(obj, {
             * [.object()](#module_define-accessor2--module.exports+object) ⇒ <code>MethodDecorator</code>
             * [.symbol()](#module_define-accessor2--module.exports+symbol) ⇒ <code>MethodDecorator</code>
             * [.bigint()](#module_define-accessor2--module.exports+bigint) ⇒ <code>MethodDecorator</code>
-            * [.array()](#module_define-accessor2--module.exports+array) ⇒ <code>MethodDecorator</code>
+            * [.integer()](#module_define-accessor2--module.exports+integer) ⇒ <code>MethodDecorator</code>
             * [.infinity()](#module_define-accessor2--module.exports+infinity) ⇒ <code>MethodDecorator</code>
             * [.nan()](#module_define-accessor2--module.exports+nan) ⇒ <code>MethodDecorator</code>
             * [.date()](#module_define-accessor2--module.exports+date) ⇒ <code>MethodDecorator</code>
@@ -227,7 +227,6 @@ const {_name}= defineAccessor(obj, {
             * [.error()](#module_define-accessor2--module.exports+error) ⇒ <code>MethodDecorator</code>
             * [.set()](#module_define-accessor2--module.exports+set) ⇒ <code>MethodDecorator</code>
             * [.map()](#module_define-accessor2--module.exports+map) ⇒ <code>MethodDecorator</code>
-            * [.integer()](#module_define-accessor2--module.exports+integer) ⇒ <code>MethodDecorator</code>
         * _inner_
             * [~Context](#module_define-accessor2--module.exports..Context)
             * [~SetterFunction](#module_define-accessor2--module.exports..SetterFunction) ⇒ <code>any</code>
@@ -509,10 +508,10 @@ Symbol decorator
 BigInt decorator
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-<a name="module_define-accessor2--module.exports+array"></a>
+<a name="module_define-accessor2--module.exports+integer"></a>
 
-#### module.exports.array() ⇒ <code>MethodDecorator</code>
-Array decorator
+#### module.exports.integer() ⇒ <code>MethodDecorator</code>
+Integer decorator
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 <a name="module_define-accessor2--module.exports+infinity"></a>
@@ -561,12 +560,6 @@ Set decorator
 
 #### module.exports.map() ⇒ <code>MethodDecorator</code>
 Map decorator
-
-**Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-<a name="module_define-accessor2--module.exports+integer"></a>
-
-#### module.exports.integer() ⇒ <code>MethodDecorator</code>
-Integer decorator
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 <a name="module_define-accessor2--module.exports..Context"></a>
