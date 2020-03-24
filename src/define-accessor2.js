@@ -111,7 +111,7 @@ function prepareDescriptor(prop, descriptor) {
 
     if (set) {
         if (typeof set !== 'function') {
-            throw Error('setter should be a function');
+            throw Error('set should be a function');
         }
 
         if (!writable) {

@@ -241,6 +241,64 @@ describe('defineProperty', function () {
         });
     });
 
+    it("should throw if prop touches itself", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                touches: propName
+            });
+        }).to.throw(Error, /touches itself/);
+    });
+
+    it("should throw if invalid touches detected", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                touches: 123
+            });
+        }).to.throw(Error, /Invalid touches for prop property/);
+    });
+
+    it("should throw if get is not a function", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                get: 123
+            });
+        }).to.throw(Error, /get should be a function/);
+    });
+
+    it("should throw if get is not a function", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                set: 123
+            });
+        }).to.throw(Error, /set should be a function/);
+    });
+
+    it("should throw if value was set to read-only virtual property", function () {
+        const obj = {};
+        const propName = "prop";
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                writable: false,
+                virtual: true,
+                value: 123
+            });
+        }).to.throw(Error, /Unable to set init value for read-only virtual accessor/);
+    });
+
+
     describe("in cached mode", function () {
         it("should throw if no getter were passed", function () {
             const obj = {};
