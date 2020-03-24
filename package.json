@@ -1,6 +1,6 @@
 {
   "name": "define-accessor2",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Define feature-rich properties using decorators or plain functions. An extended version of Object.defineProperty",
   "main": "./src/define-accessor2.js",
   "directories": {
