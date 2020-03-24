@@ -13,7 +13,7 @@
     "jsdoc": "jsdoc src/define-accessor2.js",
     "prepublishOnly": "npm test && npm run docs",
     "postversion": "git push && git push --tags",
-    "lint": "eslint src",
+    "lint": "eslint src/*.js",
     "test": "npm run babel && npm run babel-legacy && nyc --reporter=html --reporter=text mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
     "test:only": "npm run babel && npm run babel-legacy && mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
@@ -56,13 +56,12 @@
     "babel-core": "^7.0.0-bridge.0",
     "chai": "^4.2.0",
     "coveralls": "^3.0.9",
+    "eslint": "^6.8.0",
     "expect": "^23.6.0",
     "jsdoc-to-markdown": "^5.0.3",
     "mocha": "^5.2.0",
     "nodemon": "^2.0.2",
     "nyc": "^15.0.0",
-    "shx": "^0.3.2",
-    "object-hash": "^2.0.3",
-    "validator": "^12.2.0"
+    "shx": "^0.3.2"
   }
 }

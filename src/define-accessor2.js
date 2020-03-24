@@ -623,16 +623,16 @@ class Context{
                 }
 
                 const {
-                    prefix
+                    prefix= ''
                 } = arg2 || {};
 
                 if (prefix && typeof prefix !== 'string') {
                     throw TypeError('prefix options should be a string');
                 }
 
-                const props = arg1;
-                result= Object.keys(props).reduce((descriptors, prop) => {
-                    descriptors[(prefix && typeof prop === 'string' ? prefix : '') + prop] = buildDescriptor(prop, props[prop]);
+                const props= Object.keys(arg1).concat(Object.getOwnPropertySymbols(arg1));
+                result= props.reduce((descriptors, prop) => {
+                    descriptors[typeof prop === 'string'? prefix + prop : prop] = buildDescriptor(prop, arg1[prop]);
                     return descriptors;
                 }, {});
             }
@@ -663,13 +663,13 @@ class Context{
     flushAccessor(obj, ...props) {
         const propsMap = obj && obj[symbolCachedPropKeys];
 
-        if(propsMap){
-            let i= props.length;
-            while(i-->0){
+        if (propsMap) {
+            let i = props.length;
+            while (i-- > 0) {
                 const cacheKey = propsMap[props[i]];
-                if(cacheKey){
+                if (cacheKey) {
                     obj[cacheKey] = UNDEFINED_VALUE;
-                }else{
+                } else {
                     return false;
                 }
             }
@@ -808,7 +808,7 @@ class Context{
      * }
      */
 
-    accessor(accessorDescriptor){}
+    accessor(accessorDescriptor){} // eslint-disable-line no-unused-vars
 
     /**
      * lazy decorator
@@ -841,7 +841,7 @@ class Context{
      * @alias module:define-accessor2#type
      */
 
-    type(type){}
+    type(type){} // eslint-disable-line no-unused-vars
 
     /**
      * validate decorator
@@ -850,7 +850,7 @@ class Context{
      * @alias module:define-accessor2#validate
      */
 
-    validate(validator){}
+    validate(validator){} // eslint-disable-line no-unused-vars
 
     /**
      * touches decorator
@@ -859,7 +859,7 @@ class Context{
      * @alias module:define-accessor2#touches
      */
 
-    touches(props){}
+    touches(props){} // eslint-disable-line no-unused-vars
 
     /**
      * Undefined decorator

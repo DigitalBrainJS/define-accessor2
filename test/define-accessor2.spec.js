@@ -1,3 +1,4 @@
+/* global describe, it */
 const lib =require('../src/define-accessor2');
 const {defineAccessor, defineValidator, flushAccessor, privateSymbol, lazy, cached, accessor, type, validate, touches}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
@@ -93,11 +94,27 @@ describe('defineProperty', function () {
         expect(counter).to.equal(2);
     });
 
-    it("should create new public prop with string key", function () {
+    Object.entries({
+        string: 'x',
+        symbol: Symbol()
+    }).forEach(([type, prop])=>{
+        it(`should create a new public prop with ${type} key`, function () {
+            const obj = {};
+            defineAccessor(obj, prop, {});
+            expect(obj).to.have.property(prop);
+        });
+    });
+
+    it(`should support map of props`, function () {
         const obj = {};
-        const propName = 'prop';
-        defineAccessor(obj, propName, {});
-        expect(obj).to.have.property(propName);
+        const prop= 'x';
+        const symbolProp= Symbol();
+        defineAccessor(obj, {
+            [prop]: {},
+            [symbolProp]: {}
+        });
+        expect(obj).to.have.property(prop);
+        expect(obj).to.have.property(symbolProp);
     });
 
     it("should support the definition of multiple properties", function () {
@@ -191,6 +208,39 @@ describe('defineProperty', function () {
         });
     });
 
+    describe("touches", function(){
+        const symbol= Symbol('testProperty');
+        Object.entries({
+            'string': ['x', 'x'],
+            'symbol': [symbol, symbol],
+            'array': [symbol, [symbol]]
+        }).forEach(([type, [prop, ref]])=>{
+            it(`should flush cached property by ${type} reference`, function () {
+                const obj= {};
+                let counter= 0;
+                defineAccessor(obj, {
+                    [prop]: {
+                        get(){
+                            counter++;
+                        },
+                        cached: true
+                    },
+
+                    y: {
+                        touches: ref
+                    }
+                });
+                +obj[prop];
+                +obj[prop];
+
+                expect(counter).to.equal(1);
+                obj.y= 1;
+                +obj[prop];
+                expect(counter).to.equal(2);
+            });
+        });
+    });
+
     describe("in cached mode", function () {
         it("should throw if no getter were passed", function () {
             const obj = {};
@@ -220,7 +270,7 @@ describe('defineProperty', function () {
             expect(counter).to.equal(1)
         });
 
-        it("should flushed when relative accessor changed", function () {
+/*        it("should flushed when relative accessor changed", function () {
             const obj = {};
             let counter= 0;
 
@@ -243,7 +293,7 @@ describe('defineProperty', function () {
             obj.y= 1;
             +obj.x;
             expect(counter).to.equal(2);
-        });
+        });*/
     });
 
     describe("with chains option", function () {
@@ -432,9 +482,6 @@ describe("type system", function () {
 
             it(`should return true if value is a type of ${type}`, () => {
                 positiveValues.forEach(value => {
-                    if(type==='object'){
-                        debugger;
-                    }
                     expect(predicate(value), `value ${tagOf(value)} is not type of ${type}`).to.be.true;
                 });
             });
