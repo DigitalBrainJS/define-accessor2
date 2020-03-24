@@ -439,8 +439,8 @@ function buildDecorator(arg0, name) {
         });
     };
 
-    return typeof arg0==='function'? function(params){
-        return decorator.call(this, arg0(params));
+    return typeof arg0==='function'? function(){
+        return decorator.call(this, arg0.apply(this, arguments));
     } : decorator(arg0);
 }
 

@@ -102,6 +102,30 @@ module.exports = {
         +obj.x;
 
         expect(counter).to.equal(2);
+    },
+
+    "should throw if options is not the last argument of accessor decorator": function () {
+        expect(() => {
+            const Class = class {
+                @accessor({
+                    get(){}
+                }, function(){})
+                x= 123
+            };
+
+            const obj = new Class();
+        }).to.throw(Error, /options object must be the last argument, but found at index/);
+    },
+
+    "should throw if too many arguments were passed to the accessor decorator": function () {
+        expect(() => {
+            const Class = class {
+                @accessor(true, true, true, {})
+                x= 123
+            };
+
+            const obj = new Class();
+        }).to.throw(Error, /Unknown parameter at index/);
     }
 };
 
