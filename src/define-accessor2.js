@@ -64,8 +64,6 @@ function prepareDescriptor(prop, descriptor) {
         if (!(prop = prop.trim())) {
             throw TypeError('prop should be a non-empty string');
         }
-    } else if (!isSymbolProp) {
-        throw TypeError('expected prop to be a string|symbol');
     }
 
     if (!isPlainObject(descriptor)) {

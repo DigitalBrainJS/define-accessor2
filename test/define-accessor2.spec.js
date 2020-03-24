@@ -18,12 +18,20 @@ describe('defineProperty', function () {
 
     it(`should throw if prop is not a string or symbol`, function () {
         const obj = {};
-        Object.keys(asserts).forEach((type) => {
-            const value = asserts[type];
+        Object.entries(asserts).forEach(([type, value]) => {
             expect(() => {
                 defineAccessor(obj, value, {});
             }).to.throw(TypeError, /prop/i, `Passing [${value}] of [${type}] type doesn't throw`);
         });
+    });
+
+    it(`should throw if getter is missing for lazy prop `, function () {
+        const obj = {};
+        expect(() => {
+            defineAccessor(obj, 'x', {
+                lazy: true
+            });
+        }).to.throw(Error, /getter is required for lazy prop/i);
     });
 
     it(`should throw if prop is empty string`, function () {
@@ -92,6 +100,16 @@ describe('defineProperty', function () {
         obj.x=1;
         obj.x=2;
         expect(counter).to.equal(2);
+    });
+
+    it("should throw if setter assigned to non-writable property", function () {
+        const obj= {};
+        expect(() => {
+            defineAccessor(obj, 'x', {
+                writable: false,
+                set(){}
+            });
+        }).to.throw(Error, /writable option can not be set to false when setter is defined/i);
     });
 
     Object.entries({
@@ -261,6 +279,12 @@ describe('defineProperty', function () {
                 touches: 123
             });
         }).to.throw(Error, /Invalid touches for prop property/);
+
+        expect(() => {
+            defineAccessor(obj, propName, {
+                touches: [123]
+            });
+        }).to.throw(Error, /expected prop to be a string|symbol/);
     });
 
     it("should throw if get is not a function", function () {
@@ -298,6 +322,15 @@ describe('defineProperty', function () {
         }).to.throw(Error, /Unable to set init value for read-only virtual accessor/);
     });
 
+    it("should throw if setter missing for writable virtual property", function () {
+        expect(() => {
+            defineAccessor({}, 'x', {
+                get(){},
+                writable: true,
+                virtual: true
+            });
+        }).to.throw(Error, /missing setter for writable virtual prop/);
+    });
 
     describe("in cached mode", function () {
         it("should throw if no getter were passed", function () {
