@@ -37,20 +37,33 @@ $ yarn add define-property2
 ````javascript
 const {defineAccessor, flushAccessor}= require('define-accessor2');
 ````
+## Playground
+
+1) Clone `https://github.com/DigitalBrainJS/define-accessor2.git` repo
+2) Open `sandbox/sandbox.js` file with a basic example of using library decorators
+3) Run this file using `npm run sandbox` command to watch the result
 
 ## Usage examples
+
 A basic example of using library decorators (with plugin-proposal-decorators and plugin-proposal-class-properties babel plugins):
 ````javascript
-const {string} = require('define-accessor2');
+const {type, string, number} = require("define-accessor2");
 
-class Cat{
+class Cat {
     @string
-    name= ''
+    name = '';
+    @type(string|number)
+    foo= 123;
 }
 
-const cat= new Cat();
-cat.name= 'Lucky'; // Ok
-cat.name= 123; // TypeError: Property name accepts String, but number given
+const cat = new Cat();
+cat.name = 'Lucky'; // Ok
+cat.foo= 123;
+cat.foo= '123';
+
+cat.foo= true; // TypeError: Property foo accepts String|Number, but boolean given
+cat.name = 123; // TypeError: Property name accepts String, but number given
+
 ````
 More complex:
 ````javascript

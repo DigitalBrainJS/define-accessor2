@@ -780,16 +780,16 @@ class Context{
      * @param accessorDescriptor
      * @returns {MethodDecorator}
      * @alias module:define-accessor2#accessor
-     * @example
+     * @example````
      * class Person{
-     *     @accessor({
+     *     &commat;accessor({
      *         set: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
      *     })
      *     fullName='';
      *
      *     firstName= 'John';
      *     lastName= 'John Doe';
-     * }
+     * }````
      *//**
      * @param {Function} [get] - getter function, can be omitted
      * @param {Function} [set] - setter function, can be omitted
@@ -798,7 +798,7 @@ class Context{
      * @alias module:define-accessor2#accessor
      * @example
      * class Person{
-     *     @accessor(null, (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())
+     *     &commat;accessor(null, (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())
      *     fullName='';
      *
      *     firstName= 'John';

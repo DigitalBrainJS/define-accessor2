@@ -37,20 +37,33 @@ $ yarn add define-property2
 ````javascript
 const {defineAccessor, flushAccessor}= require('define-accessor2');
 ````
+## Playground
+
+1) Clone `https://github.com/DigitalBrainJS/define-accessor2.git` repo
+2) Open `sandbox/sandbox.js` file with a basic example of using library decorators
+3) Run this file using `npm run sandbox` command to watch the result
 
 ## Usage examples
+
 A basic example of using library decorators (with plugin-proposal-decorators and plugin-proposal-class-properties babel plugins):
 ````javascript
-const {string} = require('define-accessor2');
+const {type, string, number} = require("define-accessor2");
 
-class Cat{
+class Cat {
     @string
-    name= ''
+    name = '';
+    @type(string|number)
+    foo= 123;
 }
 
-const cat= new Cat();
-cat.name= 'Lucky'; // Ok
-cat.name= 123; // TypeError: Property name accepts String, but number given
+const cat = new Cat();
+cat.name = 'Lucky'; // Ok
+cat.foo= 123;
+cat.foo= '123';
+
+cat.foo= true; // TypeError: Property foo accepts String|Number, but boolean given
+cat.name = 123; // TypeError: Property name accepts String, but number given
+
 ````
 More complex:
 ````javascript
@@ -242,7 +255,9 @@ const {_name}= defineAccessor(obj, {
 <a name="exp_module_define-accessor2--module.exports"></a>
 
 ### module.exports ⏏
-The default library context. Call context.newContext() toreturn a new context inherited from the current.This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
+The default library context. Call context.newContext() to
+return a new context inherited from the current.
+This allows you to create an isolated library scope, which does not affect any others in case of defining a custom validator.
 
 **Kind**: Exported member  
 <a name="module_define-accessor2--module.exports+defineAccessor"></a>
@@ -260,7 +275,11 @@ Defines a single accessor
 
 **Example**  
 ```js
-defineAccessor(obj, "age", {    get(){        return 99;    }})
+defineAccessor(obj, "age", {
+    get(){
+        return 99;
+    }
+})
      
 ```
 <a name="module_define-accessor2--module.exports+defineAccessor"></a>
@@ -278,7 +297,16 @@ Defines several accessors with the same descriptor
 
 **Example**  
 ```js
-defineAccessor(obj, ["name", "surname"], {    get(privateValue, propKey){        switch(propKey){            case 'name':             return 'John';            case 'surname':             return 'Connor';        }    }})
+defineAccessor(obj, ["name", "surname"], {
+    get(privateValue, propKey){
+        switch(propKey){
+            case 'name':
+             return 'John';
+            case 'surname':
+             return 'Connor';
+        }
+    }
+})
      
 ```
 <a name="module_define-accessor2--module.exports+defineAccessor"></a>
@@ -298,7 +326,21 @@ Defines several accessors using hash map
 
 **Example**  
 ```js
-const {_name, _surname}= defineAccessor(obj, {    name: {        get(){            return 'John';        }    },    surname: {        get(){            return 'Connor';        }    }}, {    prefix: '_'})
+const {_name, _surname}= defineAccessor(obj, {
+    name: {
+        get(){
+            return 'John';
+        }
+    },
+
+    surname: {
+        get(){
+            return 'Connor';
+        }
+    }
+}, {
+    prefix: '_'
+})
 ```
 <a name="module_define-accessor2--module.exports+flushAccessor"></a>
 
@@ -315,7 +357,12 @@ flush accessor's cache
 
 **Example**  
 ```js
-defineAccessor(obj, "hash", {    get(){        return calcObjectSHA(this);    }})flushAccessor(obj, 'hash')
+defineAccessor(obj, "hash", {
+    get(){
+        return calcObjectSHA(this);
+    }
+})
+flushAccessor(obj, 'hash')
 ```
 <a name="module_define-accessor2--module.exports+privateSymbol"></a>
 
@@ -343,7 +390,8 @@ Defines a new validator in the current library context
 
 **Example**  
 ```js
-const validator = require('validator');defineValidator('email', validator.isEmail);
+const validator = require('validator');
+defineValidator('email', validator.isEmail);
      
 ```
 <a name="module_define-accessor2--module.exports+defineValidator"></a>
@@ -359,7 +407,11 @@ Defines a new validator in the current library context
 
 **Example**  
 ```js
-const validator = require('validator');defineValidator({ email: validator.isEmail, ip: validator.isIP});
+const validator = require('validator');
+defineValidator({
+ email: validator.isEmail,
+ ip: validator.isIP
+});
 ```
 <a name="module_define-accessor2--module.exports+newContext"></a>
 
@@ -369,7 +421,12 @@ creates a new library context
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
 **Example**  
 ```js
-const {defineAccessor, flushAccessor, defineValidator}= require('define-accessor2').newContext()//define custom validators for the current and inherited from the current contexts onlydefineValidator({    even: (value)=> typeof value && value % 2===0,    odd: (value)=> typeof value && Math.abs(value % 2)===1,});
+const {defineAccessor, flushAccessor, defineValidator}= require('define-accessor2').newContext()
+//define custom validators for the current and inherited from the current contexts only
+defineValidator({
+    even: (value)=> typeof value && value % 2===0,
+    odd: (value)=> typeof value && Math.abs(value % 2)===1,
+});
 ```
 <a name="module_define-accessor2--module.exports+accessor"></a>
 
@@ -377,21 +434,24 @@ const {defineAccessor, flushAccessor, defineValidator}= require('define-accessor
 accessor decorator
 
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-**Accessor({**: set: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()    })    fullName='';    firstName= 'John';    lastName= 'John Doe';}  
+**Example&#x60;&#x60;&#x60;&#x60;**: class Person{
+    @accessor({
+        set: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+    })
+    fullName='';
+
+    firstName= 'John';
+    lastName= 'John Doe';
+}````  
 
 | Param |
 | --- |
 | accessorDescriptor | 
 
-**Example**  
-```js
-class Person{    
-```
 <a name="module_define-accessor2--module.exports+accessor"></a>
 
 #### module.exports.accessor([get], [set], [accessorDescriptor]) ⇒ <code>MethodDecorator</code>
 **Kind**: instance method of [<code>module.exports</code>](#exp_module_define-accessor2--module.exports)  
-**Accessor(null,**: (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())    fullName='';    firstName= 'John';    lastName= 'John Doe';}  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -401,7 +461,13 @@ class Person{
 
 **Example**  
 ```js
-class Person{    
+class Person{
+    @accessor(null, (value)=> value.charAt(0).toUpperCase() + value.slice(1).toLowerCase())
+    fullName='';
+
+    firstName= 'John';
+    lastName= 'John Doe';
+}
 ```
 <a name="module_define-accessor2--module.exports+lazy"></a>
 
