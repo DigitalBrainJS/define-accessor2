@@ -1,6 +1,6 @@
 /* global describe, it */
 const lib =require('../src/define-accessor2');
-const {defineAccessor, defineValidator, flushAccessor, privateSymbol, lazy, cached, accessor, type, validate, touches}= lib;
+const {defineAccessor, defineValidator, flushAccessor, privateSymbol}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
 const chai=require('chai');
 const Joi = require('@hapi/joi');
@@ -53,6 +53,18 @@ describe('defineProperty', function () {
         });
     });
 
+    it(`should throw if options is not a plain object`, function () {
+        expect(() => {
+            defineAccessor({}, {}, new RegExp(''));
+        }).to.throw(TypeError, /options should be a plain object/);
+    });
+
+    it(`should throw if prefix is not a string`, function () {
+        expect(() => {
+            defineAccessor({}, {}, {prefix: true});
+        }).to.throw(TypeError, /prefix options should be a string/);
+    });
+
     it("should throw if validate is not function|joi schema|known validator name", function () {
         const obj = {};
         const propName = "prop";
@@ -100,6 +112,90 @@ describe('defineProperty', function () {
         obj.x=1;
         obj.x=2;
         expect(counter).to.equal(2);
+    });
+
+    it("should support a cached virtual property", function () {
+        let obj = {};
+        let counter = 0;
+        let _value= 123;
+
+        defineAccessor(obj, 'x', {
+            virtual: true,
+            cached: true,
+            get(){
+                counter++;
+                return _value;
+            },
+
+            set(value) {
+                if (_value !== value) {
+                    _value = value;
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        expect(obj.x).to.equal(123);
+        expect(counter).to.equal(1);
+        +obj.x;
+        expect(counter).to.equal(1);
+        obj.x= 456;
+        expect(obj.x).to.equal(456);
+        expect(counter).to.equal(2);
+        obj.x= 456;
+        expect(obj.x).to.equal(456);
+        expect(counter).to.equal(2);
+    });
+
+    it("should throw if setter of a cached virtual property returns not boolean or undefined values", function () {
+        const obj = {};
+        expect(() => {
+            defineAccessor(obj, 'x', {
+                virtual: true,
+                cached: true,
+                get(){
+
+                },
+                set(){
+                    return {};
+                }
+            });
+
+            obj.x= 123;
+        }).to.throw(Error, /setter for virtual prop 'x' should return true if the value has been changed/);
+    });
+
+    it("should throw if setter of not cached virtual property returns not an undefined value", function () {
+        const obj = {};
+        expect(() => {
+            defineAccessor(obj, 'x', {
+                virtual: true,
+                get(){
+
+                },
+                set(){
+                    return {};
+                }
+            });
+
+            obj.x= 123;
+        }).to.throw(Error, /setter for virtual prop 'x' should not return any value/);
+    });
+
+    it("should support setting initialization value", function () {
+        let obj = {};
+        defineAccessor(obj, 'x', {
+            value: 123
+        });
+        expect(obj.x).to.equal(123);
+
+        obj = {};
+        defineAccessor(obj, 'x', {
+            value: 123,
+            writable: false
+        });
+        expect(obj.x).to.equal(123);
     });
 
     it("should throw if setter assigned to non-writable property", function () {
@@ -505,6 +601,41 @@ describe("privateSymbol", function () {
     });
 });
 
+describe("flushAccessor", function () {
+    it(`should return true if flushed successfully`, function () {
+        const obj = {};
+
+        defineAccessor(obj, 'x', {
+            get(){},
+            cached: true
+        });
+
+        expect(flushAccessor(obj, 'x')).to.equal(true);
+    });
+
+    it(`should return false if not flushed successfully`, function () {
+        const obj = {};
+
+        defineAccessor(obj, {
+            x: {
+                get() {},
+                cached: false
+            }
+        });
+
+        expect(flushAccessor(obj, 'x')).to.equal(false);
+
+        defineAccessor(obj, {
+            y: {
+                get() {},
+                cached: true
+            }
+        });
+
+        expect(flushAccessor(obj, 'x')).to.equal(false);
+    });
+});
+
 describe("defineValidator", function () {
     it("should throw if name is not string a-z, A-Z, 0-9", function () {
         expect(()=> defineValidator('!custom', (value) => value === 'test')).to.throw('validator name');
@@ -588,7 +719,7 @@ describe("type system", function () {
 
     Object.entries(fixture).forEach(([type, positiveValues])=>{
         const negativeValues= [];
-        Object.entries(fixture).forEach(([_type, values])=> {
+        Object.entries(fixture).forEach(([, values])=> {
             if(type!==type){
                 negativeValues.push(...values);
             }

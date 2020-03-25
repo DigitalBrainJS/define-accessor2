@@ -17,9 +17,10 @@
     "test": "npm run babel && npm run babel-legacy && nyc --reporter=html --reporter=text mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
     "test:only": "npm run babel && npm run babel-legacy && mocha ./test/define-accessor2.spec.js --exit --timeout=3000",
     "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "babel": "babel  --config-file ./.babelrc ./test/decorators.spec.js --out-file ./test/decorators.build.spec.js",
-    "babel-legacy": "babel --config-file ./.babelrc-legacy ./test/decorators.spec.js --out-file ./test/decorators.legacy.build.spec.js",
-    "sandbox": "babel sandbox/sandbox.js --out-file sandbox/sandbox.build.js && node sandbox/sandbox.build.js || true"
+    "babel": "babel ./test/decorators.spec.js --out-file ./test/decorators.build.spec.js",
+    "babel-legacy": "babel --no-babelrc --config-file ./babelrc-legacy.json ./test/decorators.spec.js --out-file ./test/decorators.legacy.build.spec.js",
+    "sandbox": "babel sandbox/sandbox.js --out-file sandbox/sandbox.build.js && node sandbox/sandbox.build.js || true",
+    "sandbox:watch": "nodemon --ignore *.build.js --exec \"npm run sandbox\""
   },
   "repository": "https://github.com/DigitalBrainJS/define-accessor2.git",
   "bugs": {

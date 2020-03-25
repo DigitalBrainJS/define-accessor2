@@ -143,6 +143,14 @@ function prepareDescriptor(prop, descriptor) {
             privateKeyStore[prop] = symbol;
         }
 
+        if (value !== undefined) {
+            if (virtual && writable) {
+                obj[prop] = value;
+            } else {
+                obj[symbol] = value;
+            }
+        }
+
         if (chains) {
             if (!propName) {
                 throw Error(`can't create named chain for anonymous symbol property`);
@@ -261,22 +269,23 @@ function prepareDescriptor(prop, descriptor) {
                 (reason ? '. Reason: ' + reason : ''));
         };
 
+        let validationResult;
         try {
-            const validationResult = validate.call(this, value, {
+            validationResult = validate.call(this, value, {
                 set: (_value) => {
                     value = _value;
                 }, reject, prop
             });
-
-            if (validationResult === false) {
-                reject(typeof validationResult === 'string' ? validationResult : '');
-            }
         } catch (err) {
             if (err.name === 'ValidationError') {
                 reject(err.message);
             } else {
                 throw err;
             }
+        }
+
+        if (validationResult!==undefined && validationResult !== true) {
+            reject(typeof validationResult === 'string' ? validationResult : '');
         }
     };
 
@@ -309,23 +318,22 @@ function prepareDescriptor(prop, descriptor) {
         }
 
         if (virtual) {
-            const cachedFlag = set.call(this, value, prop);
+            const changedFlag = set.call(this, value, prop);
 
             if (cached || touches) {
-                if (cachedFlag !== true && cachedFlag !== false) {
-                    throw Error(`setter of the virtual cached prop [${propName}] should return ` +
-                        `a bool flag indicating whether the value has been changed inside`);
+                if (changedFlag !== true && changedFlag !== false) {
+                    throw Error(`setter for virtual prop '${propName}' should return true if the value has been changed`);
                 }
 
-                if (cachedFlag) {
+                if (changedFlag) {
                     if (cached) {
                         this[symbolCache] = UNDEFINED_VALUE;
                     }
                     touches && context.flushAccessor(this, ...touches);
                 }
             } else {
-                if (cachedFlag !== undefined) {
-                    throw Error(`setter for virtual prop [${propName}] should not return any value`);
+                if (changedFlag !== undefined) {
+                    throw Error(`setter for virtual prop '${propName}' should not return any value`);
                 }
             }
 
@@ -372,12 +380,12 @@ function prepareDescriptor(prop, descriptor) {
     return {
         symbol,
         symbolCache,
-        readonly: !writable,
+        writable,
         get: getter,
         set: setter,
         configurable,
         enumerable,
-        initValue: value,
+        value,
         initTarget
     }
 }
@@ -389,6 +397,7 @@ function reduceDecorator(decorator){
         }else{
             const {descriptor, finisher}= decorator.call(this, {
                 key: arg1,
+                kind: 'method',
                 placement: typeof arg0==='function'? 'static' : 'prototype',
                 descriptor: arg2
             });
@@ -408,7 +417,7 @@ function buildDecorator(arg0, name) {
                 throw Error(`${name} decorator can be used for public method or field`);
             }
 
-            const {get, set, enumerable, configurable, initTarget, initValue, symbol} = prepareDescriptor.call(this, key, {
+            const {get, set, enumerable, configurable, initTarget} = prepareDescriptor.call(this, key, {
                 get: descriptor.get,
                 set: descriptor.set,
                 value: initializer ? initializer() : undefined,
@@ -430,9 +439,6 @@ function buildDecorator(arg0, name) {
                 finisher: (target) => {
                     const _target = placement !== 'static' ? target.prototype : target;
                     initTarget(_target);
-                    if (initValue !== undefined) {
-                        _target[symbol] = initValue;
-                    }
                     return target;
                 }
             }
@@ -589,25 +595,23 @@ class Context{
 
      defineAccessor(obj, arg1, arg2 = {}) {
          const descriptors = {};
+         const initializers= [];
 
          const buildDescriptor = (prop, options = {}) => {
-             const descriptor= prepareDescriptor.call(this, prop, options);
-             descriptors[prop] = descriptor;
-             descriptor.initTarget(obj);
-             return descriptor.symbol;
+             const {get, set, configurable, enumerable, symbol, initTarget}= prepareDescriptor.call(this, prop, options);
+             descriptors[prop] = {
+                 get,
+                 set,
+                 configurable,
+                 enumerable
+             };
+             initializers.push(initTarget);
+             return symbol;
          };
 
          const initProps = () => {
              defineProperties(obj, descriptors);
-             Object.entries(descriptors).forEach(([prop, {initValue, symbol, readonly}]) => {
-                 if (initValue !== undefined) {
-                     if (readonly) {
-                         this[symbol] = initValue;
-                     } else {
-                         this[prop] = initValue;
-                     }
-                 }
-             });
+             initializers.forEach(target=> target(obj));
          };
 
         let result;
@@ -617,7 +621,7 @@ class Context{
                 result= arg1.map(prop => buildDescriptor(prop, arg2));
             } else {
                 if (arg2 !== undefined && !isPlainObject(arg2)) {
-                    throw TypeError(`Options should be a plain object`);
+                    throw TypeError(`options should be a plain object`);
                 }
 
                 const {
@@ -671,8 +675,9 @@ class Context{
                     return false;
                 }
             }
+            return true;
         }
-        return true;
+        return false;
     }
 
     /**

@@ -40,8 +40,9 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
 ## Playground
 
 1) Clone `https://github.com/DigitalBrainJS/define-accessor2.git` repo
-2) Open `sandbox/sandbox.js` file with a basic example of using library decorators
-3) Run this file using `npm run sandbox` command to watch the result
+2) Run `npm install` to install dev-dependencies
+3) Open `sandbox/sandbox.js` file with a basic example of using library decorators
+4) Run this file using `npm run sandbox` or `npm run sandbox:watch` command to see the result
 
 ## Usage examples
 
@@ -178,8 +179,9 @@ const {_name}= defineAccessor(obj, {
             typeof value!=='string' && reject('must be a string');
             value= value.trim();
             !/^[a-zA-Z]+$/.test(value) && reject('only a-zA-Z allowed');
-            value.length<=3 && reject('length should be greater than 3');
-            set(value);
+            if( value.length<= 3) return 'length should be greater than 3'; // alternative way to reject
+            // returning other values than 'true' and 'undefined' treated, as rejection, strings are considered as rejection reason
+            set(value); // change the value
         },
         set: normalize,
         touches: ['hash'],
