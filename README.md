@@ -46,25 +46,29 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
 
 ## Usage examples
 
-A basic example of using library decorators (with plugin-proposal-decorators and plugin-proposal-class-properties babel plugins):
+A basic example of using library decorators (with [plugin-proposal-decorators](https://babeljs.io/docs/en/babel-plugin-proposal-decorators)
+and [plugin-proposal-class-properties](https://babeljs.io/docs/en/babel-plugin-proposal-class-properties) babel plugins):
 ````javascript
-const {type, string, number} = require("define-accessor2");
+const {type, string, number, array} = require("../src/define-accessor2");
 
 class Cat {
     @string
     name = '';
-    @type(string|number)
-    foo= 123;
+    @type(string | number)
+    foo = 123;
+    @array
+    bar = [];
 }
 
 const cat = new Cat();
 cat.name = 'Lucky'; // Ok
-cat.foo= 123;
-cat.foo= '123';
+cat.foo = 123;
+cat.foo = '123';
+cat.bar = [1, 2, 3];
 
-cat.foo= true; // TypeError: Property foo accepts String|Number, but boolean given
 cat.name = 123; // TypeError: Property name accepts String, but number given
-
+cat.foo = true; // TypeError: Property foo accepts String|Number, but boolean given
+cat.bar= {}; //Property bar accepts Array, but object given
 ````
 More complex:
 ````javascript
@@ -146,7 +150,7 @@ Validate with Joi:
 ````
 Custom validator:
 ````javascript
-     //import library and create new context for a local validator definition
+     //import library and create a new context for a local validator definition
      const {defineAccessor, defineValidator}= require('define-accessor2').newContext();
      const validator= require('validator');
      const model= {};
@@ -179,8 +183,10 @@ const {_name}= defineAccessor(obj, {
             typeof value!=='string' && reject('must be a string');
             value= value.trim();
             !/^[a-zA-Z]+$/.test(value) && reject('only a-zA-Z allowed');
-            if( value.length<= 3) return 'length should be greater than 3'; // alternative way to reject
-            // returning other values than 'true' and 'undefined' treated, as rejection, strings are considered as rejection reason
+            // alternative way to reject
+            if( value.length<= 3) return 'length should be greater than 3';
+            // returning other values than 'true' and 'undefined' treated, as rejection,
+            // strings are considered as rejection reason
             set(value); // change the value
         },
         set: normalize,
@@ -700,11 +706,9 @@ Special type:
 *There are predicates for each type named like isUndefined(value), isNumber(value) etc.*
 
 You can combine these types:
-type: 'string|number' // strings
-or
-type: TYPE_STRING|TYPE_NUMBER //bit mask
-or
-type: string|number // decorators converted to a type bit mask with the valueOf() method
+- type: 'string|number' // strings
+- type: TYPE_STRING|TYPE_NUMBER //bit mask
+- type: string|number // decorators are implicitly converted to a type bit mask using the valueOf() internal method
 
 ### Decorators
 The library supports both versions of the decorators specification (legacy & current draft).
@@ -717,7 +721,7 @@ There are following decorators:
 - accessor
 - and decorators for each basic type (string, number, array etc. see [Built-in types](#built-in-types))
 Each decorator has valueOf method that returns a type bit mask, so it's possible to pass decorators as a type:
-@type(number|string)
+`@type(number|string)`
 
 ## Contribution
 Feel free to fork, open issues, enhance or create pull requests.
