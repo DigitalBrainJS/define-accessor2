@@ -1,6 +1,6 @@
 /* global describe, it */
 const lib =require('../src/define-accessor2');
-const {defineAccessor, defineValidator, flushAccessor, privateSymbol}= lib;
+const {defineAccessor, defineValidator, flushAccessor, privateSymbol, TYPE_NUMBER, TYPE_STRING}= lib;
 const {resolvePredicate, tagOf}=require('../src/types');
 const chai=require('chai');
 const Joi = require('@hapi/joi');
@@ -63,42 +63,6 @@ describe('defineProperty', function () {
         expect(() => {
             defineAccessor({}, {}, {prefix: true});
         }).to.throw(TypeError, /prefix options should be a string/);
-    });
-
-    it("should throw if validate is not function|joi schema|known validator name", function () {
-        const obj = {};
-        const propName = "prop";
-
-        expect(() => {
-            defineAccessor(obj, propName, {
-                validate: 123
-            });
-        }).to.throw(Error, /should be a function/, `function`);
-
-        expect(() => {
-            defineAccessor(obj, propName, {
-                validate: {}
-            });
-        }).to.throw(Error, /Unknown validator type/);
-
-        expect(() => {
-            defineAccessor(obj, propName, {
-                validate: "unknown"
-            });
-        }).to.throw(Error, /Unknown validator/);
-    });
-
-    it("should throw when validate attached to non writable property", function () {
-        const obj = {};
-        const propName = "prop";
-
-        expect(() => {
-            defineAccessor(obj, propName, {
-                validate: () => {
-                },
-                writable: false
-            });
-        }).to.throw(Error, /validate can be used for writable property only/);
     });
 
     it("should call the setter when assigning a value", function () {
@@ -289,6 +253,56 @@ describe('defineProperty', function () {
     });
 
     describe("validation", function () {
+        it("should throw if validate is not function|joi schema|known validator name", function () {
+            const obj = {};
+            const propName = "prop";
+
+            expect(() => {
+                defineAccessor(obj, propName, {
+                    validate: 123
+                });
+            }).to.throw(Error, /should be a function/, `function`);
+
+            expect(() => {
+                defineAccessor(obj, propName, {
+                    validate: {}
+                });
+            }).to.throw(Error, /Unknown validator type/);
+
+            expect(() => {
+                defineAccessor(obj, propName, {
+                    validate: "unknown"
+                });
+            }).to.throw(Error, /Unknown validator/);
+        });
+
+        it("should throw when validate attached to non writable property", function () {
+            const obj = {};
+            const propName = "prop";
+
+            expect(() => {
+                defineAccessor(obj, propName, {
+                    validate: () => {
+                    },
+                    writable: false
+                });
+            }).to.throw(Error, /validate can be used for writable property only/);
+        });
+
+        it("should support changing value using set function", function () {
+            const obj = {};
+
+            defineAccessor(obj, 'x', {
+                validate: (value, {set}) => {
+                    set(value + 1);
+                }
+            });
+
+            obj.x= 123;
+
+            expect(obj.x).to.equal(124);
+        });
+
         it("should throw when validate function return false", function () {
             const obj = {};
             const propName = "prop";
@@ -457,7 +471,7 @@ describe('defineProperty', function () {
             expect(counter).to.equal(1)
         });
 
-/*        it("should flushed when relative accessor changed", function () {
+        it("should be flushed when relative accessor changed", function () {
             const obj = {};
             let counter= 0;
 
@@ -480,7 +494,48 @@ describe('defineProperty', function () {
             obj.y= 1;
             +obj.x;
             expect(counter).to.equal(2);
-        });*/
+        });
+
+        it("should be flushed when the value changed", function () {
+            const obj= {};
+            let counter1= 0;
+            let counter2= 0;
+
+            defineAccessor(obj, {
+                x: {
+                    get(value){
+                        counter1++;
+                        return value;
+                    },
+                    set(value){
+                        return value;
+                    },
+                    cached: true,
+                    touches: 'y',
+                    value: 123
+                },
+                y: {
+                   get(value){
+                       counter2++;
+                       return value;
+                   },
+                    cached: true,
+                    value: 123
+                }
+            });
+
+            expect(obj.x).to.equal(123);
+            expect(obj.y).to.equal(123);
+            +obj.x;
+            +obj.y;
+            expect(counter1).to.equal(1);
+            expect(counter2).to.equal(1);
+            obj.x= 456;
+            expect(obj.x).to.equal(456);
+            expect(obj.y).to.equal(123);
+            expect(counter1).to.equal(2);
+            expect(counter2).to.equal(2);
+        })
     });
 
     describe("with chains option", function () {
@@ -728,6 +783,25 @@ describe("type system", function () {
     });
 
     makeTest('integer', [1], [1.1, NaN, Infinity]);
+
+    it('should support union types', function () {
+        const predicate= resolvePredicate(TYPE_NUMBER | TYPE_STRING);
+        expect(typeof predicate).to.equal('function');
+        expect(predicate(1)).to.equal(true);
+        expect(predicate('1')).to.equal(true);
+        expect(predicate({})).to.equal(false);
+    });
+
+    it('should resolve objects&function with the valueOf method', function () {
+        const f= function(){};
+        f.valueOf= ()=> TYPE_STRING;
+        expect(resolvePredicate(f)).to.equal(resolvePredicate(TYPE_STRING));
+        expect(resolvePredicate({
+            valueOf(){
+                return TYPE_NUMBER
+            }
+        })).to.equal(resolvePredicate(TYPE_NUMBER));
+    })
 });
 
 const importTests= (name, tests)=>{

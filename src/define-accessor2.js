@@ -284,9 +284,11 @@ function prepareDescriptor(prop, descriptor) {
             }
         }
 
-        if (validationResult!==undefined && validationResult !== true) {
+        if (validationResult !== undefined && validationResult !== true) {
             reject(typeof validationResult === 'string' ? validationResult : '');
         }
+
+        return value;
     };
 
     const checkType = type && (() => {
@@ -310,11 +312,8 @@ function prepareDescriptor(prop, descriptor) {
 
         checkType && checkType(value);
 
-        if (validate) {
-            const returnedValue = _validate.call(this, value);
-            if (returnedValue !== undefined) {
-                value = returnedValue;
-            }
+        if (_validate) {
+            value = _validate.call(this, value);
         }
 
         if (virtual) {
@@ -357,10 +356,7 @@ function prepareDescriptor(prop, descriptor) {
             checkType && checkType(newValue);
 
             if (validate) {
-                const returnedValue = _validate.call(this, newValue);
-                if (returnedValue !== undefined) {
-                    newValue = returnedValue;
-                }
+               newValue = _validate.call(this, newValue);
             }
 
             if (cached) {
