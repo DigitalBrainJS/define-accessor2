@@ -35,7 +35,7 @@ $ yarn add define-property2
 ```
 
 ````javascript
-const {defineAccessor, flushAccessor}= require('define-accessor2');
+const {defineAccessor}= require('define-accessor2');
 ````
 ## Playground
 
@@ -49,7 +49,7 @@ const {defineAccessor, flushAccessor}= require('define-accessor2');
 A basic example of using library decorators (with [plugin-proposal-decorators](https://babeljs.io/docs/en/babel-plugin-proposal-decorators)
 and [plugin-proposal-class-properties](https://babeljs.io/docs/en/babel-plugin-proposal-class-properties) babel plugins):
 ````javascript
-const {type, string, number, array} = require("../src/define-accessor2");
+const {type, string, number, array} = require("define-accessor2");
 
 class Cat {
     @string
